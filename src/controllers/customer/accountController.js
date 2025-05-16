@@ -43,8 +43,8 @@ accountController.purchase = async (req, res) => {
         let header = await index.header(req);
         let formatFunction = await general.formatFunction();
         
-        // Get user's order history
-        let orders = await account.getOrders(req.user.user_id);
+        // Use customer_id for order lookup
+        let orders = await account.getOrders(req.user.customer_id);
 
         res.status(200).render('./pages/account/purchase', {
             header: header,

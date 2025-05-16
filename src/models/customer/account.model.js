@@ -128,14 +128,14 @@ account.viewFeedback = async (customer_id, order_id, product_variant_id) => {
 }
 
 // Get user orders
-account.getOrders = async (userId) => {
+account.getOrders = async (customerId) => {
     try {
         const getOrders = `
             SELECT * FROM orders 
-            WHERE user_id = ? 
+            WHERE customer_id = ? 
             ORDER BY order_date DESC
         `;
-        const orders = await query(getOrders, [userId]);
+        const orders = await query(getOrders, [customerId]);
         return orders;
     } catch (error) {
         console.error("Error getting orders:", error);

@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Lịch sử đơn mua</title>
+    <link rel="stylesheet" href="/styles/pages/account/purchase.css">
+    <style>
+        body { font-family: Arial, sans-serif; background: #f7f7f7; margin: 0; }
+        .container { max-width: 900px; margin: 40px auto; background: #fff; border-radius: 8px; box-shadow: 0 2px 8px #0001; padding: 32px; }
+        h1 { text-align: center; margin-bottom: 32px; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+        th, td { padding: 12px 10px; border-bottom: 1px solid #eee; text-align: left; }
+        th { background: #f0f4fa; }
+        tr:last-child td { border-bottom: none; }
+        .empty { text-align: center; color: #888; padding: 40px 0; }
+        .btn-home { display: inline-block; padding: 10px 24px; background: #2a7ee4; color: #fff; border: none; border-radius: 4px; text-decoration: none; font-weight: bold; margin-top: 16px; }
+        .btn-home:hover { background: #155ab6; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Lịch sử đơn mua</h1>
+        <% if (orders && orders.length > 0) { %>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Mã đơn hàng</th>
+                        <th>Ngày đặt</th>
+                        <th>Tổng tiền</th>
+                        <th>Trạng thái</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% orders.forEach(order => { %>
+                        <tr>
+                            <td><%= order.order_id %></td>
+                            <td><%= order.order_date ? order.order_date.toLocaleDateString('vi-VN') : '' %></td>
+                            <td><%= order.order_total ? order.order_total.toLocaleString('vi-VN') + ' ₫' : '' %></td>
+                            <td>
+                                <% if (order.order_status === 0) { %> Chờ xác nhận
+                                <% } else if (order.order_status === 1) { %> Đã xác nhận
+                                <% } else if (order.order_status === 2) { %> Đang giao
+                                <% } else if (order.order_status === 3) { %> Đã giao
+                                <% } else if (order.order_status === 4) { %> Đã hủy
+                                <% } else { %> -
+                                <% } %>
+                            </td>
+                        </tr>
+                    <% }) %>
+                </tbody>
+            </table>
+        <% } else { %>
+            <div class="empty">Bạn chưa có đơn hàng nào.</div>
+        <% } %>
+        <div style="text-align:center;">
+            <a href="/" class="btn-home">Quay về trang chủ</a>
+        </div>
+    </div>
+</body>
+</html>
