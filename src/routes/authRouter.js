@@ -8,6 +8,7 @@ const authController = require('../controllers/customer/authController.js');
 router.get('/login', authController.login);
 router.post('/login', authController.login_post);
 router.get('/register', authController.register);
+router.post('/register', authController.register_post); // Ensure this line exists
 router.get('/logout', authController.logout);
 
 module.exports = router;

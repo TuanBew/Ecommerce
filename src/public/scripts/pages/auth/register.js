@@ -197,3 +197,46 @@ const validateInput = async () => {
             })
     }
 };
+
+document.addEventListener('DOMContentLoaded', function() {
+    const registerForm = document.getElementById('form');
+    const fullnameInput = document.getElementById('userName');
+    const usernameInput = document.getElementById('username');
+    const phoneInput = document.getElementById('phoneNumber');
+    const passwordInput = document.getElementById('password');
+    const confirmPasswordInput = document.getElementById('passwordRepeat');
+
+    if (registerForm) {
+        registerForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            // Get form data
+            const userName = fullnameInput.value.trim();
+            const username = usernameInput.value.trim();
+            const phoneNumber = phoneInput.value.trim();
+            const password = passwordInput.value.trim();
+            const passwordRepeat = confirmPasswordInput.value.trim();
+
+            // Submit form via AJAX
+            fetch('/auth/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ userName, username, phoneNumber, password, passwordRepeat })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    alert('Đăng ký thành công!');
+                    window.location.href = data.redirectUrl || '/';
+                } else {
+                    alert(data.message || 'Đăng ký thất bại');
+                }
+            })
+            .catch(error => {
+                alert('Đã xảy ra lỗi khi đăng ký');
+            });
+        });
+    }
+});

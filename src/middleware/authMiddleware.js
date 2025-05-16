@@ -3,9 +3,9 @@ const util = require('util');
 const db = require('../config/db/connect');
 const query = util.promisify(db.query).bind(db);
 
-const authMiddleware = function () { };
+const authMiddleware = {};
 
-// Check if user is logged in and redirect to login if not
+// Middleware for pages that require login
 authMiddleware.isLoggedIn = async (req, res, next) => {
     try {
         if (!req.cookies.jwt) {
@@ -13,21 +13,21 @@ authMiddleware.isLoggedIn = async (req, res, next) => {
         }
 
         const decoded = jwt.verify(req.cookies.jwt, process.env.JWT_SECRET);
-        
-        // Check if user exists
-        const users = await query(`
-            SELECT u.*, c.customer_id
-            FROM users u
-            LEFT JOIN customers c ON u.user_id = c.user_id
-            WHERE u.user_id = ? AND u.role_id = 2
-        `, [decoded.user_id]);
-        
+
+        // Accept both admin and customer roles
+        const users = await query(
+            `SELECT u.*, c.customer_id
+             FROM users u
+             LEFT JOIN customers c ON u.user_id = c.user_id
+             WHERE u.user_id = ?`,
+            [decoded.user_id]
+        );
+
         if (users.length === 0) {
             res.clearCookie('jwt', { path: '/' });
             return res.redirect('/auth/login');
         }
-        
-        // User is authenticated
+
         req.user = users[0];
         next();
     } catch (error) {
@@ -37,27 +37,26 @@ authMiddleware.isLoggedIn = async (req, res, next) => {
     }
 };
 
-// Check if user is logged in but don't redirect (for optional authentication)
+// Middleware for pages that can be accessed by both logged in and not logged in users
 authMiddleware.getLoggedIn = async (req, res, next) => {
     try {
         if (req.cookies.jwt) {
             const decoded = jwt.verify(req.cookies.jwt, process.env.JWT_SECRET);
-            
-            const users = await query(`
-                SELECT u.*, c.customer_id
-                FROM users u
-                LEFT JOIN customers c ON u.user_id = c.user_id
-                WHERE u.user_id = ?
-            `, [decoded.user_id]);
-            
+
+            const users = await query(
+                `SELECT u.*, c.customer_id
+                 FROM users u
+                 LEFT JOIN customers c ON u.user_id = c.user_id
+                 WHERE u.user_id = ?`,
+                [decoded.user_id]
+            );
+
             if (users.length > 0) {
                 req.user = users[0];
             }
         }
-        
         next();
     } catch (error) {
-        console.error("getLoggedIn middleware error:", error);
         req.user = null;
         next();
     }

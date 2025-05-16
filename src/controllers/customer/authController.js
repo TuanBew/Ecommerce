@@ -83,7 +83,7 @@ authController.login_post = async (req, res) => {
 
     // Create JWT token
     const token = jwt.sign(
-      { user_id: user.user_id, role_id: user.role_id },
+      { user_id: user.user_id },
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRES }
     );
@@ -137,6 +137,88 @@ authController.register = async (req, res) => {
   } catch (error) {
     console.error("Register page error:", error);
     res.status(500).redirect("/error");
+  }
+};
+
+// [POST] /auth/register
+authController.register_post = async (req, res) => {
+  try {
+    const fullname = req.body.userName; // Họ tên
+    const username = req.body.username; // Tên đăng nhập
+    const phoneNumber = req.body.phoneNumber;
+    const password = req.body.password;
+    const confirmPassword = req.body.passwordRepeat;
+
+    if (!fullname || !username || !phoneNumber || !password || !confirmPassword) {
+      return res.status(400).json({
+        status: "fail",
+        message: "Vui lòng nhập đầy đủ thông tin",
+      });
+    }
+    if (password !== confirmPassword) {
+      return res.status(400).json({
+        status: "fail",
+        message: "Mật khẩu không khớp",
+      });
+    }
+
+    // Check for duplicates (user_login_name, user_name, user_phone)
+    const duplicate = await query(
+      `SELECT * FROM users WHERE user_login_name = ? OR user_name = ? OR user_phone = ? LIMIT 1`,
+      [username, fullname, phoneNumber]
+    );
+    if (duplicate.length > 0) {
+      let msg = "Thông tin đã được sử dụng: ";
+      if (duplicate[0].user_login_name === username) msg += "Tên đăng nhập, ";
+      if (duplicate[0].user_name === fullname) msg += "Họ tên, ";
+      if (duplicate[0].user_phone === phoneNumber) msg += "Số điện thoại, ";
+      msg = msg.replace(/, $/, "");
+      return res.status(409).json({
+        status: "fail",
+        message: msg,
+      });
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Insert new user (remove role_id)
+    const insertUser = `
+            INSERT INTO users (user_login_name, user_password, user_name, user_phone, user_register_date)
+            VALUES (?, ?, ?, ?, NOW())
+        `;
+    const result = await query(insertUser, [username, hashedPassword, fullname, phoneNumber]);
+
+    // Insert into customers table if needed
+    const userId = result.insertId;
+    await query("INSERT INTO customers (user_id) VALUES (?)", [userId]);
+
+    // Auto-login: create JWT and set cookie (remove role_id)
+    const token = jwt.sign(
+      { user_id: userId },
+      process.env.JWT_SECRET,
+      { expiresIn: process.env.JWT_EXPIRES }
+    );
+    res.cookie("jwt", token, {
+      expires: new Date(
+        Date.now() + process.env.JWT_COOKIE_EXPIRES * 24 * 60 * 60 * 1000
+      ),
+      httpOnly: true,
+      path: "/",
+    });
+
+    // Success
+    return res.status(201).json({
+      status: "success",
+      message: "Đăng ký thành công!",
+      redirectUrl: "/",
+    });
+  } catch (error) {
+    console.error("Register error:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "Đã xảy ra lỗi khi đăng ký",
+    });
   }
 };
 
