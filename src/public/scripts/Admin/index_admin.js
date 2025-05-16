@@ -1,3 +1,37 @@
+// Sidebar toggle functionality
+const menuButton = document.getElementById('menuButton');
+const sidebar = document.getElementById('admin-sidebar');
+
+if (menuButton) {
+    menuButton.addEventListener('click', () => {
+        sidebar.classList.toggle('active');
+    });
+}
+
+// Highlight active menu item
+const currentPath = window.location.pathname;
+const menuItems = document.querySelectorAll('.admin-sidebar__list-item');
+
+menuItems.forEach(item => {
+    const href = item.getAttribute('href');
+    if (href === currentPath || (href !== '/admin' && currentPath.startsWith(href))) {
+        item.classList.add('active');
+    } else if (href !== currentPath) {
+        item.classList.remove('active');
+    }
+});
+
+// Handle sidebar responsive behavior
+function handleScreenChange(mediaQuery) {
+    if (mediaQuery.matches) {
+        sidebar.classList.remove('active');
+    }
+}
+
+const mediaQuery = window.matchMedia('(max-width: 768px)');
+handleScreenChange(mediaQuery);
+mediaQuery.addEventListener('change', handleScreenChange);
+
 // // SIDEBAR TOGGLE
 // let sidebarOpen = false
 // const sidebar = document.getElementById('admin-sidebar')
@@ -17,9 +51,8 @@
 // }
 
 
-const sidebar = document.getElementById('admin-sidebar');
 const openSidebarBtn = document.getElementById('menuButton');
-let sidebarOpen = false;
+sidebarOpen = false;
 
 // Hàm mở thanh bên
 function openSidebar() {

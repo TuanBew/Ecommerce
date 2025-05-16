@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Quản lý danh mục</title>
+    <!-- Import CSS -->
+    <link rel="stylesheet" href="/styles/Admin/pages/cate_admin.css">
+    <link rel="stylesheet" href="/styles/Admin/pages/cate_view_admin.css">
+    <link rel="stylesheet" href="/styles/Admin/components/toolbar.css">
+    <!-- Google Icons -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+</head>
+<body>
+    <div class="grid-container">
+        <!-- Include sidebar partial -->
+        <%- include('../partials/sidebar_admin') %>
+
+        <!-- Include header partial -->
+        <%- include('../partials/header_admin', { title: title }) %>
+
+        <!-- Main -->
+        <main class="main-container">
+            <div class="main-title">
+                <h1>QUẢN LÝ DANH MỤC</h1>
+            </div>
+
+            <!-- Toolbar -->
+            <div class="toolbar">
+                <div class="toolbar__search">
+                    <input type="text" id="searchInput" placeholder="Tìm kiếm danh mục...">
+                    <button><span class="material-symbols-rounded">search</span></button>
+                </div>
+                <div class="toolbar__actions">
+                    <a href="/admin/category_add_admin" class="btn btn-primary">
+                        <span class="material-symbols-rounded">add</span>
+                        Thêm danh mục
+                    </a>
+                </div>
+            </div>
+
+            <!-- Categories Table -->
+            <div class="table-responsive">
+                <table id="categories-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Hình ảnh</th>
+                            <th>Tên danh mục</th>
+                            <th>Loại</th>
+                            <th>Số sản phẩm</th>
+                            <th>Ngày thêm</th>
+                            <th>Trạng thái</th>
+                            <th>Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% if(categories && categories.length > 0) { %>
+                            <% categories.forEach(category => { %>
+                                <tr>
+                                    <td><%= category.category_id %></td>
+                                    <td class="img-cell">
+                                        <% if(category.category_img) { %>
+                                            <img src="/imgs/categories/<%= category.category_img %>" alt="<%= category.category_name %>" class="category-img">
+                                        <% } else { %>
+                                            <span class="material-symbols-rounded">image_not_supported</span>
+                                        <% } %>
+                                    </td>
+                                    <td><%= category.category_name %></td>
+                                    <td><%= category.categorry_type || 'Không xác định' %></td>
+                                    <td><%= category.productCount || 0 %></td>
+                                    <td><%= new Date(category.category_added_date || Date.now()).toLocaleDateString('vi-VN') %></td>
+                                    <td class="status <%= category.category_is_display ? 'good' : 'bad' %>">
+                                        <p><%= category.category_is_display ? 'Hiển thị' : 'Ẩn' %></p>
+                                    </td>
+                                    <td>
+                                        <a href="/admin/category_edit_admin/<%= category.category_id %>" class="btn btn-edit">
+                                            <span class="material-symbols-rounded">edit</span>
+                                        </a>
+                                        <button class="btn btn-delete" data-id="<%= category.category_id %>">
+                                            <span class="material-symbols-rounded">delete</span>
+                                        </button>
+                                    </td>
+                                </tr>
+                            <% }); %>
+                        <% } else { %>
+                            <tr>
+                                <td colspan="8" class="empty">Không có danh mục nào</td>
+                            </tr>
+                        <% } %>
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="/scripts/Admin/index_admin.js"></script>
+</body>
+</html>

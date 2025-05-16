@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <!-- Import CSS -->
+    <link rel="stylesheet" href="/styles/Admin/pages/dashboard_admin.css">
+    <!-- Google Icons -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+    <!-- ApexCharts -->
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+</head>
+<body>
+    <div class="grid-container">
+        <!-- Include sidebar partial if it exists -->
+        <%- include('../partials/sidebar_admin') %>
+
+        <!-- Include header partial if it exists -->
+        <%- include('../partials/header_admin', { title: title }) %>
+
+        <!-- Main -->
+        <main class="main-container">
+            <div class="main-title">
+                <h1>DASHBOARD</h1>
+            </div>
+
+            <!-- CARDS -->
+            <div class="main-cards">
+                <div class="card">
+                    <div class="card__icon">
+                        <span class="material-symbols-rounded">inventory_2</span>
+                    </div>
+                    <div class="card-inner">
+                        <h3>SẢN PHẨM</h3>
+                        <h1><%= stats.products %></h1>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card__icon">
+                        <span class="material-symbols-rounded">shopping_cart</span>
+                    </div>
+                    <div class="card-inner">
+                        <h3>ĐƠN HÀNG</h3>
+                        <h1><%= stats.orders %></h1>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card__icon">
+                        <span class="material-symbols-rounded">groups</span>
+                    </div>
+                    <div class="card-inner">
+                        <h3>KHÁCH HÀNG</h3>
+                        <h1><%= stats.users %></h1>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CHARTS -->
+            <div class="charts">
+                <div class="charts-card">
+                    <h2 class="chart-title">Đơn hàng</h2>
+                    <div id="bar"></div>
+                </div>
+
+                <div class="charts-card">
+                    <h2 class="chart-title">Danh mục sản phẩm</h2>
+                    <div id="donut"></div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="/scripts/Admin/dashboard.js"></script>
+    <script src="/scripts/Admin/index_admin.js"></script>
+</body>
+</html>

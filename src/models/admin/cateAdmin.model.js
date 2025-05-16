@@ -81,19 +81,19 @@ cateAdmin.addCategory = async (categoryName, categoryImg) => {
 }
 
 // Update an existing category
-cateAdmin.updateCategory = async (categoryId, categoryName, categoryImg) => {
+cateAdmin.updateCategory = async (categoryId, categoryName, categoryImg, categoryType) => {
     try {
         let updateQuery = '';
         let params = [];
         
-        // If image is provided, update both name and image
+        // If image is provided, update both name, type and image
         if (categoryImg) {
-            updateQuery = `UPDATE categories SET category_name = ?, category_img = ? WHERE category_id = ?`;
-            params = [categoryName, categoryImg, categoryId];
+            updateQuery = `UPDATE categories SET category_name = ?, categorry_type = ?, category_img = ? WHERE category_id = ?`;
+            params = [categoryName, categoryType, categoryImg, categoryId];
         } else {
-            // Otherwise update only the name
-            updateQuery = `UPDATE categories SET category_name = ? WHERE category_id = ?`;
-            params = [categoryName, categoryId];
+            // Otherwise update only the name and type
+            updateQuery = `UPDATE categories SET category_name = ?, categorry_type = ? WHERE category_id = ?`;
+            params = [categoryName, categoryType, categoryId];
         }
         
         let result = await query(updateQuery, params);

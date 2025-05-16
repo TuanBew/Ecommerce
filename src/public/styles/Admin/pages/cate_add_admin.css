@@ -1,0 +1,146 @@
+/* Importing base styles */
+@import url('/styles/Admin/pages/cate_view_admin.css');
+
+/* Card styling */
+.card {
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+    overflow: hidden;
+}
+
+.card-header {
+    padding: 15px 20px;
+    border-bottom: 1px solid #eee;
+}
+
+.card-header h4 {
+    margin: 0;
+    font-size: 18px;
+    color: #333;
+}
+
+.card-body {
+    padding: 20px;
+}
+
+/* Form styling */
+.form-label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: #333;
+}
+
+.form-control {
+    width: 100%;
+    padding: 10px 12px;
+    font-size: 14px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    transition: border-color 0.3s;
+}
+
+.form-control:focus {
+    border-color: #2a7ee4;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(42, 126, 228, 0.1);
+}
+
+select.form-control {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background: #fff url("data:image/svg+xml;utf8,<svg fill='black' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/><path d='M0 0h24v24H0z' fill='none'/></svg>") no-repeat;
+    background-position: calc(100% - 10px) center;
+    padding-right: 30px;
+}
+
+/* Button styling */
+.form-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.btn-admin {
+    padding: 10px 20px;
+    font-size: 14px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: background-color 0.3s, transform 0.2s;
+}
+
+.btn-admin:hover {
+    transform: translateY(-1px);
+}
+
+.btn-primary {
+    background-color: #2a7ee4;
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: #1c6ad4;
+}
+
+.btn-secondary {
+    background-color: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background-color: #5a6268;
+}
+
+/* Image upload area styling */
+.dz-dropzone {
+    min-height: 150px;
+    border: 2px dashed #ddd;
+    border-radius: 4px;
+    background: #f8f9fa;
+    padding: 20px;
+}
+
+.dz-message {
+    text-align: center;
+}
+
+.img-upload {
+    width: 50px;
+    margin-bottom: 15px;
+}
+
+.image-upload-label {
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 15px;
+    background: #2a7ee4;
+    color: white;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.image-upload-label:hover {
+    background: #1c6ad4;
+}
+
+.preview-image {
+    text-align: center;
+    margin-bottom: 15px;
+}
+
+.preview-image img {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 3px;
+}

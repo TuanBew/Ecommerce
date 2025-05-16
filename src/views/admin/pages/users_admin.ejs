@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Quản lý người dùng</title>
+    <!-- Import CSS -->
+    <link rel="stylesheet" href="/styles/Admin/pages/cate_view_admin.css">
+    <!-- Google Icons -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+</head>
+<body>
+    <div class="grid-container">
+        <!-- Include sidebar partial -->
+        <%- include('../partials/sidebar_admin') %>
+
+        <!-- Include header partial -->
+        <%- include('../partials/header_admin', { title: title }) %>
+
+        <!-- Main -->
+        <main class="main-container">
+            <div class="main-title">
+                <h1>QUẢN LÝ NGƯỜI DÙNG</h1>
+            </div>
+
+            <!-- Toolbar -->
+            <div class="toolbar">
+                <div class="toolbar__search">
+                    <input type="text" placeholder="Tìm kiếm người dùng...">
+                    <button><span class="material-symbols-rounded">search</span></button>
+                </div>
+            </div>
+
+            <!-- Users Table -->
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Họ tên</th>
+                            <th>Email</th>
+                            <th>Số điện thoại</th>
+                            <th>Ngày đăng ký</th>
+                            <th>Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% if(users && users.length > 0) { %>
+                            <% users.forEach(user => { %>
+                                <tr>
+                                    <td><%= user.user_id %></td>
+                                    <td><%= user.user_fullname || 'N/A' %></td>
+                                    <td><%= user.user_email %></td>
+                                    <td><%= user.user_phone || 'N/A' %></td>
+                                    <td><%= user.user_date ? new Date(user.user_date).toLocaleDateString('vi-VN') : 'N/A' %></td>
+                                    <td>
+                                        <button class="btn btn-view" data-id="<%= user.user_id %>">
+                                            <span class="material-symbols-rounded">visibility</span>
+                                        </button>
+                                    </td>
+                                </tr>
+                            <% }); %>
+                        <% } else { %>
+                            <tr>
+                                <td colspan="6" class="empty">Không có người dùng nào</td>
+                            </tr>
+                        <% } %>
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="/scripts/Admin/index_admin.js"></script>
+</body>
+</html>

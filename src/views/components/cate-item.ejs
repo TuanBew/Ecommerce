@@ -1,5 +1,5 @@
-<a href="/search/results?category_id=<%= cate.category_id %>" class="cate__item">
-	<img src="/imgs/categories/<%= cate.category_img %>" alt="<%= cate.category_name ?? 'NaN' %>">
-	<h4><%= cate.category_name ?? 'NaN' %></h4>
-	<p><%= cate.category_count ?? 'NaN' %> sản phẩm</p>
+<a href="/search/results?category_id=<%= cate && cate.category_id ? cate.category_id : (cate && cate.id ? cate.id : '#') %>" class="cate__item">
+	<img src="/imgs/categories/<%= cate && cate.category_img ? cate.category_img : 'default.jpg' %>" alt="<%= cate && cate.category_name ? cate.category_name : 'Category' %>">
+	<h4><%= cate && cate.category_name ? cate.category_name : 'Category' %></h4>
+	<p><%= cate && cate.category_count ? cate.category_count : '0' %> sản phẩm</p>
 </a>

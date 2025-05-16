@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="author" content="IE104.O12_Nhom2">
+    <title>TECHTWO.Admin - Thêm danh mục</title>
+    <link rel="shortcut icon" type="image/x-icon" href="/imgs/ico-logo-blue.png">
+    <link rel="stylesheet" href="/styles/Admin/pages/cate_add_admin.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+</head>
+<body>
+    <div class="grid-container">
+        <%- include('../partials/sidebar_admin') %>
+        <%- include('../partials/header_admin', {title: {title: 'Thêm danh mục sản phẩm'} }) %>
+
+        <main class="main-container">
+            <div class="main-title">
+                <h1>THÊM DANH MỤC SẢN PHẨM</h1>
+            </div>
+
+            <div class="row">
+                <div class="main-form">
+                    <div class="card">
+                        <div class="card-body">
+                            <div>
+                                <label for="product-name-label" class="form-label">Tên danh mục sản phẩm</label>
+                                <input type="text" class="form-control" name="categoryName" id="product-name-label" placeholder="Nhập tên danh mục sản phẩm" value="">
+                            </div>
+                            
+                            <div style="margin-top: 20px;">
+                                <label for="category-type-label" class="form-label">Loại danh mục</label>
+                                <select class="form-control" name="categoryType" id="category-type-label">
+                                    <option value="Laptop">Laptop</option>
+                                    <option value="PC">PC</option>
+                                    <option value="Linh Kiện">Linh Kiện</option>
+                                    <option value="Gaming Gear">Gaming Gear</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h4>Ảnh</h4>
+                        </div>
+
+                        <div class="card-body">
+                            <div class="dz-dropzone dz-dropzone-card">
+                                <div class="dz-message">
+                                    <img class="img-upload" src="/imgs/admin/img-upload.svg" alt="Image Description">
+                                    <h5>Kéo và thả hình ảnh tại đây</h5>
+                                    <p>hoặc</p>
+                                    <div class="dz-message-btn">
+                                        <input type="file" name="image" id="imageUpload" accept="image/*" style="display: none">
+                                        <label for="imageUpload" class="image-upload-label">
+                                            <span class="material-symbols-rounded"> upload </span> 
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-buttons">
+                        <button type="button" id="saveButton" class="btn-admin btn-primary">Lưu</button>
+                        <a href="/admin/categories_admin" class="btn-admin btn-secondary">Hủy</a>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="/scripts/Admin/index_admin.js"></script>
+    <script src="/scripts/Admin/cate_add_admin.js"></script>
+</body>
+</html>

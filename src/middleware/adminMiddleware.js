@@ -1,50 +1,50 @@
 const db = require('../config/db/connect');
-const jwt = require('jsonwebtoken')
-const { promisify } = require('util')
+const jwt = require('jsonwebtoken');
+const { promisify } = require('util');
 
-exports.isLoggedIn = async (req, res, next) => {
-    console.log(`isLoggedIn: ${req.cookies.adminSave}`);
+exports.isAdmin = async (req, res, next) => {
+    console.log('[ADMIN MIDDLEWARE] Checking admin authentication');
+    
     if (req.cookies.adminSave) {
         try {
-            // 1. Verify the token
-            const decoded = await promisify(jwt.verify)(req.cookies.adminSave,
-                process.env.JWT_SECRET
-            );
-            console.log(decoded);
-
-            // 2. Check if the admin still exist
-            db.query('SELECT * FROM admin WHERE admin_id = ?', [decoded.id], (err, results) => {
-                if (!results) {
-                    return next();
+            // Verify token
+            const decoded = await promisify(jwt.verify)(req.cookies.adminSave, process.env.JWT_SECRET);
+            console.log('[ADMIN MIDDLEWARE] Decoded token:', decoded);
+            
+            // Find admin using admin_id from token
+            db.query('SELECT * FROM admin WHERE admin_id = ?', [decoded.admin_id], (err, results) => {
+                if (err) {
+                    console.log('[ADMIN MIDDLEWARE] DB error:', err);
+                    return res.redirect('/admin/login');
                 }
-                req.admin = results[0];
-                next();
+                
+                if (results.length === 0) {
+                    console.log('[ADMIN MIDDLEWARE] Admin not found');
+                    res.clearCookie('adminSave');
+                    return res.redirect('/admin/login');
+                }
+                
+                // Admin exists, store in request for use in controllers
+                req.admin = results[0]; 
+                req.user = results[0]; // For compatibility with templates that expect user
+                console.log('[ADMIN MIDDLEWARE] Auth successful for:', req.admin.admin_login_name);
+                return next();
             });
         } catch (err) {
-            console.log(err)
-            return next();
+            console.log('[ADMIN MIDDLEWARE] Token verification error:', err);
+            res.clearCookie('adminSave');
+            return res.redirect('/admin/login');
         }
     } else {
-        res.status(401).redirect('/admin/login')
+        console.log('[ADMIN MIDDLEWARE] No cookie found, redirecting to login');
+        return res.redirect('/admin/login');
     }
-}
+};
 
+// Check if user is logged in, redirect if already logged in
 exports.checkAuth = (req, res, next) => {
-    console.log(`checkAuth: ${req.cookies.adminSave}`)
     if (req.cookies.adminSave) {
-        res.redirect('/admin/')
+        return res.redirect('/admin');
     }
-    else {
-        next();
-    }
-}
-
-exports.checkUnAuth = (req, res, next) => {
-    console.log(`checkUnAuth: ${req.cookies.adminSave}`)
-    if (!req.cookies.adminSave) {
-        res.status(401).redirect('/admin/')
-    }
-    else {
-        next();
-    }
-}
+    next();
+};

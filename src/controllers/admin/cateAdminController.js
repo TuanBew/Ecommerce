@@ -112,63 +112,64 @@ cateAdminController.postAddCategory = async (req, res) => {
 // [POST] /categories_admin/edit/:id
 cateAdminController.postEditCategory = async (req, res) => {
     try {
-        const categoryId = req.params.id
-        const categoryName = req.body.categoryName
-        let categoryImg = null
+        const categoryId = req.params.id;
+        const categoryName = req.body.categoryName;
+        const categoryType = req.body.categoryType;
+        let categoryImg = null;
         
         // Check if the category exists
-        const existingCategory = await cate.getCategoryById(categoryId)
+        const existingCategory = await cate.getCategoryById(categoryId);
         if (!existingCategory) {
             return res.status(404).json({ 
                 status: 'error',
                 message: 'Không tìm thấy danh mục với ID đã cung cấp'
-            })
+            });
         }
 
         // Handle file upload if exists
         if (req.files && req.files.image) {
-            const file = req.files.image
-            const filename = Date.now() + '_' + file.name
-            categoryImg = filename
+            const file = req.files.image;
+            const filename = Date.now() + '_' + file.name;
+            categoryImg = filename;
 
             // Ensure the directory exists
-            const uploadPath = path.join(__dirname, '../../public/imgs/categories')
+            const uploadPath = path.join(__dirname, '../../public/imgs/categories');
             if (!fs.existsSync(uploadPath)) {
-                fs.mkdirSync(uploadPath, { recursive: true })
+                fs.mkdirSync(uploadPath, { recursive: true });
             }
 
             // Move the uploaded file to categories folder
-            const filePath = path.join(uploadPath, filename)
-            await file.mv(filePath)
+            const filePath = path.join(uploadPath, filename);
+            await file.mv(filePath);
         }
         
-        // If no name provided
-        if (!categoryName) {
+        // If no name or type provided
+        if (!categoryName || !categoryType) {
             return res.status(400).json({ 
                 status: 'error',
-                message: 'Vui lòng nhập tên danh mục'
-            })
+                message: 'Vui lòng nhập đầy đủ thông tin'
+            });
         }
 
-        const result = await cate.updateCategory(categoryId, categoryName, categoryImg)
+        const result = await cate.updateCategory(categoryId, categoryName, categoryImg, categoryType);
         
         if (result) {
             return res.status(200).json({ 
                 status: 'success',
                 message: 'Cập nhật danh mục thành công'
-            })
+            });
         } else {
             return res.status(400).json({ 
                 status: 'error',
                 message: 'Cập nhật danh mục thất bại'
-            })
+            });
         }
     } catch (error) {
-        console.error(error)
+        console.error(error);
         return res.status(500).json({ 
             status: 'error',
             message: 'Đã xảy ra lỗi khi cập nhật danh mục'
-        })
+        });
     }
 }
 

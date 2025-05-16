@@ -223,15 +223,41 @@ body {
 	object-fit: contain;
 }
 
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    background-color: white;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+    border-radius: 5px;
+}
+
+table th {
+    background-color: var(--blue1);
+    color: var(--dark9);
+    font-weight: 600;
+    text-align: left;
+    padding: 15px;
+    border-bottom: 2px solid var(--dark8);
+    white-space: nowrap;
+}
+
+table td {
+    padding: 15px;
+    border-bottom: 1px solid var(--dark8);
+    vertical-align: middle;
+}
+
 table tbody tr {
-	cursor: pointer;
-	background: var(--white);
-	border-bottom: 2px solid var(--dark8);
+    cursor: pointer;
+    background: var(--white);
+    border-bottom: 1px solid var(--dark8);
+    transition: background 0.3s ease;
 }
 
 table tbody tr:hover {
-	cursor: pointer;
-	background: var(--blue1);
+    cursor: pointer;
+    background: var(--blue1);
 }
 
 table tr td {
@@ -247,41 +273,90 @@ table td button {
 	outline: none;
 	border-radius: 4px;
 	background: transparent;
+	border: none;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
 }
 
 table tbody tr .empty {
 	padding: 20px;
 	color: var(--dark6);
 	background: var(--white);
+	text-align: center;
+}
+
+.category-img {
+    width: 50px;
+    height: 50px;
+    object-fit: cover;
+    border-radius: 4px;
+    border: 1px solid var(--dark8);
+}
+
+.img-cell {
+    text-align: center;
+    width: 60px;
+}
+
+.status {
+    width: 120px;
+    text-align: center;
 }
 
 .status p {
-	padding: 8px 20px;
-	max-width: max-content;
-	font-weight: 500;
-	font-size: 0.875rem;
-	border-radius: 4px;
-	margin: 0 auto;
+    padding: 8px 20px;
+    max-width: max-content;
+    font-weight: 500;
+    font-size: 0.875rem;
+    border-radius: 4px;
+    margin: 0 auto;
 }
 
 .good p {
-	color: var(--green6);
-	background: var(--green2);
+    color: var(--green6);
+    background: var(--green2);
 }
 
 .medium p {
-	color: var(--blue6);
-	background: var(--blue2);
+    color: var(--blue6);
+    background: var(--blue2);
 }
 
 .low p {
-	color: var(--yellow6);
-	background: var(--yellow2);
+    color: var(--yellow6);
+    background: var(--yellow2);
 }
 
 .bad p {
-	color: var(--red5);
-	background: var(--red1);
+    color: var(--red5);
+    background: var(--red2);
+}
+
+/* Button styling */
+.btn-edit {
+    background-color: var(--blue5);
+    margin-right: 5px;
+}
+
+.btn-edit:hover {
+    background-color: var(--blue6);
+}
+
+.btn-delete {
+    background-color: var(--red5);
+}
+
+.btn-delete:hover {
+    background-color: var(--red6);
+}
+
+/* Add this for responsive design */
+@media screen and (max-width: 768px) {
+    table {
+        display: block;
+        overflow-x: auto;
+    }
 }
 
 @media only screen and (max-width: 48rem) {

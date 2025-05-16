@@ -46,7 +46,7 @@ const setError = (element, message) => {
 
     errorDisplay.innerText = message;
     inputControl.classList.add('error');
-    inputControl.classList.remove('error');
+    inputControl.classList.remove('success');  // Fixed: was incorrectly removing 'error' instead of 'success'
 }
 
 const setSuccess = element => {
@@ -59,9 +59,15 @@ const setSuccess = element => {
 }
 
 const validateInput = () => {
-
     const adminLoginValue = adminLogin.value.trim();
     const passwordValue = password.value.trim();
+
+    console.log("[ADMIN LOGIN CLIENT] Form values:", { 
+        adminLoginId: adminLogin.id,
+        passwordId: password.id, 
+        adminLoginValue, 
+        passwordLength: passwordValue.length 
+    });
 
     let isAllValid = true;
 
@@ -85,30 +91,55 @@ const validateInput = () => {
         setSuccess(password);
     }
 
-
     if (isAllValid) {
-        const login = {
-            adminLogin: adminLogin.value.trim(),
-            password: password.value.trim()
-        }
+        console.log("[ADMIN LOGIN CLIENT] Validation passed, sending request");
+        
+        // Create the payload explicitly matching what the backend expects
+        const loginData = {
+            admin_login_name: adminLoginValue,
+            admin_password: passwordValue
+        };
+        
+        console.log("[ADMIN LOGIN CLIENT] Payload:", loginData);
+        
+        // Use fetch with detailed logging
         fetch("/admin/login", {
             method: 'POST',
-            body: JSON.stringify(login),
             headers: {
                 "Content-Type": "application/json"
+            },
+            body: JSON.stringify(loginData)
+        })
+        .then(res => {
+            console.log("[ADMIN LOGIN CLIENT] Response status:", res.status);
+            return res.json();
+        })
+        .then(data => {
+            console.log("[ADMIN LOGIN CLIENT] Response data:", data);
+            
+            if (data.status === "success") {
+                alert('Đăng Nhập Thành Công');
+                console.log("[ADMIN LOGIN CLIENT] Login successful, redirecting to:", data.redirectUrl);
+                
+                // Force hard navigation to admin page
+                window.location = data.redirectUrl || '/admin';
+            } 
+            else if (data.status === "error") {
+                console.log("[ADMIN LOGIN CLIENT] Login failed:", data.message);
+                setError(adminLogin, data.message);
             }
-        }).then(res => res.json()).then(back => {
-            if (back.status == "error") {
-                setError(adminLogin, back.error);
-            }
-            else if (back.status == "error2") {
-                setError(password, back.error);
+            else if (data.status === "error2") {
+                console.log("[ADMIN LOGIN CLIENT] Password error:", data.message);
+                setError(password, data.message);
             }
             else {
-                window.location.href = '/admin/'
+                console.log("[ADMIN LOGIN CLIENT] Unknown response:", data);
+                alert("Đã xảy ra lỗi không xác định. Vui lòng thử lại!");
             }
-
         })
+        .catch(err => {
+            console.error("[ADMIN LOGIN CLIENT] Fetch error:", err);
+            alert("Lỗi kết nối! Vui lòng thử lại sau.");
+        });
     }
-
 };

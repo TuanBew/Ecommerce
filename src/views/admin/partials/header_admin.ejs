@@ -5,7 +5,7 @@
 	</div>
 
 	<div class="admin-header--left">
-		<h4><%=title%></h4>
+		<h4><%= typeof title === 'string' ? title : title.title %></h4>
 	</div>
 
 	<div class="admin-header--right">

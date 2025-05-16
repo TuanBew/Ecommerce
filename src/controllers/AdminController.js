@@ -12,71 +12,65 @@ class AdminController {
 
   // INDEX
   index = async(req, res) => {
-    const user = req.user;
+    try {
+      const user = req.admin; // Use admin info passed by middleware
 
-    // Count total products
-    const product = await query('SELECT COUNT(*) as total FROM products');
-    const totalProducts = product[0].total;
+      // Count total products - using simplified count queries
+      let totalProducts = 0;
+      try {
+        const product = await query('SELECT COUNT(*) as total FROM products');
+        totalProducts = product[0].total || 0;
+      } catch (err) {
+        console.log('[ADMIN DASHBOARD] Error counting products:', err.message);
+      }
 
-    // Count total orders
-    const order = await query('SELECT COUNT(*) as total FROM orders');
-    const totalOrders = order[0].total;
+      // Count total orders
+      let totalOrders = 0;
+      try {
+        const order = await query('SELECT COUNT(*) as total FROM orders');
+        totalOrders = order[0].total || 0;
+      } catch (err) {
+        console.log('[ADMIN DASHBOARD] Error counting orders:', err.message);
+      }
 
-    // Count total users
-    const users = await query('SELECT COUNT(*) as total FROM users WHERE role_id = 2');
-    const totalUsers = users[0].total;
+      // Count total users
+      let totalUsers = 0;
+      try {
+        const users = await query('SELECT COUNT(*) as total FROM users');
+        totalUsers = users[0].total || 0;
+      } catch (err) {
+        console.log('[ADMIN DASHBOARD] Error counting users:', err.message);
+      }
 
-    // Count total categories
-    const categories = await query('SELECT COUNT(*) as total FROM categories');
-    const totalCategories = categories[0].total;
-    
-    // Get statistics for the chart
-    const orderStatistics = await query(`
-      SELECT 
-        DATE_FORMAT(order_date, '%Y-%m-%d') AS date,
-        COUNT(*) AS total_orders,
-        SUM(order_total_price) AS total_sales
-      FROM orders
-      WHERE order_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
-      GROUP BY DATE_FORMAT(order_date, '%Y-%m-%d')
-      ORDER BY date ASC
-    `);
-    
-    // Get recent orders
-    const recentOrders = await query(`
-      SELECT orders.*, users.user_fullname 
-      FROM orders 
-      JOIN users ON orders.user_id = users.user_id 
-      ORDER BY order_date DESC 
-      LIMIT 5
-    `);
-    
-    // Get top selling products
-    const topProducts = await query(`
-      SELECT p.*, SUM(od.order_detail_quantity) as total_sold
-      FROM products p
-      JOIN order_details od ON p.product_id = od.product_id
-      JOIN orders o ON od.order_id = o.order_id
-      GROUP BY p.product_id
-      ORDER BY total_sold DESC
-      LIMIT 5
-    `);
-
-    res.render('admin/pages/index_admin', {
-      title: {
-        title: 'Dashboard'
-      },
-      user: user,
-      stats: {
+      // Count total categories
+      let totalCategories = 0;
+      try {
+        const categories = await query('SELECT COUNT(*) as total FROM categories');
+        totalCategories = categories[0].total || 0;
+      } catch (err) {
+        console.log('[ADMIN DASHBOARD] Error counting categories:', err.message);
+      }
+      
+      // Simple stats for dashboard - avoiding complex joins that don't match your DB schema
+      const stats = {
         products: totalProducts,
         orders: totalOrders,
         users: totalUsers,
         categories: totalCategories
-      },
-      orderStatistics,
-      recentOrders,
-      topProducts
-    })
+      };
+
+      res.render('admin/pages/index_admin', {
+        title: 'Dashboard',
+        user: user,
+        stats: stats,
+        recentOrders: [],
+        orderStatistics: [],
+        topProducts: []
+      });
+    } catch (error) {
+      console.error("[ADMIN DASHBOARD] Error:", error);
+      res.status(500).send("An error occurred loading the admin dashboard");
+    }
   }
 
   // LOGIN
@@ -103,84 +97,81 @@ class AdminController {
 
   login_post = async (req, res) => {
     try {
-      const { email, password } = req.body
+        const { admin_login_name, admin_password } = req.body;
+        console.log('[ADMIN LOGIN] Attempt:', { admin_login_name, admin_password: '****' });
 
-      // Validate
-      if (!email || !password) {
-        return res.status(400).json({
-          status: 'fail',
-          message: 'Vui lòng nhập đầy đủ thông tin'
-        })
-      }
+        // Validation
+        if (!admin_login_name || !admin_password) {
+            console.log('[ADMIN LOGIN] Missing credentials');
+            return res.status(400).json({
+                status: 'error',
+                message: 'Vui lòng nhập đầy đủ thông tin'
+            });
+        }
 
-      // Check if user exists and get data
-      db.query('SELECT * FROM users WHERE user_email = ?', [email], async (error, results) => {
-        if (error) {
-          console.log(error)
-          return res.status(500).json({
+        // Find admin in database
+        db.query('SELECT * FROM admin WHERE admin_login_name = ?', [admin_login_name], async (err, results) => {
+            if (err) {
+                console.log('[ADMIN LOGIN] Database error:', err);
+                return res.status(500).json({
+                    status: 'error',
+                    message: 'Lỗi hệ thống'
+                });
+            }
+
+            if (results.length === 0) {
+                console.log('[ADMIN LOGIN] Admin not found:', admin_login_name);
+                return res.status(401).json({
+                    status: 'error',
+                    message: 'Tài khoản không tồn tại'
+                });
+            }
+
+            // Check password
+            const isPasswordCorrect = await bcrypt.compare(admin_password, results[0].admin_password);
+            
+            if (!isPasswordCorrect) {
+                console.log('[ADMIN LOGIN] Password incorrect for:', admin_login_name);
+                return res.status(401).json({
+                    status: 'error2',
+                    message: 'Mật khẩu không chính xác'
+                });
+            }
+
+            // Generate JWT token
+            const admin_id = results[0].admin_id;
+            const token = jwt.sign({ admin_id }, process.env.JWT_SECRET, {
+                expiresIn: process.env.JWT_EXPIRES
+            });
+            
+            // Set cookie
+            const cookieOptions = {
+                expires: new Date(
+                    Date.now() + parseInt(process.env.JWT_COOKIE_EXPIRES) * 24 * 60 * 60 * 1000
+                ),
+                httpOnly: true,
+                path: '/'
+            };
+            
+            console.log('[ADMIN LOGIN] Setting cookie adminSave with token');
+            res.cookie('adminSave', token, cookieOptions);
+            
+            // Return success response
+            console.log('[ADMIN LOGIN] Login successful, redirecting to /admin');
+            return res.status(200).json({
+                status: 'success',
+                message: 'Đăng nhập thành công',
+                redirectUrl: '/admin'
+            });
+        });
+    } catch (error) {
+        console.log('[ADMIN LOGIN] Exception:', error);
+        return res.status(500).json({
             status: 'error',
             message: 'Đã xảy ra lỗi khi đăng nhập'
-          })
-        }
-
-        // if user does not exist
-        if (results.length == 0) {
-          return res.status(404).json({
-            status: 'fail',
-            message: 'Tài khoản không tồn tại'
-          })
-        }
-
-        // Check if user is an admin
-        if (results[0].role_id !== 1) {
-          return res.status(401).json({
-            status: 'fail',
-            message: 'Bạn không có quyền truy cập vào trang quản trị'
-          })
-        }
-
-        // Check password
-        const isPasswordCorrect = await bcrypt.compare(password, results[0].user_password)
-
-        if (!isPasswordCorrect) {
-          return res.status(401).json({
-            status: 'fail',
-            message: 'Mật khẩu không chính xác'
-          })
-        }
-
-        // If OK, create token
-        const user_id = results[0].user_id
-        const role_id = results[0].role_id
-        const token = jwt.sign({ user_id, role_id }, process.env.JWT_SECRET, {
-          expiresIn: process.env.JWT_EXPIRES
-        })
-
-        // Set cookie
-        const cookieOptions = {
-          expires: new Date(
-            Date.now() + process.env.JWT_COOKIE_EXPIRES * 24 * 60 * 60 * 1000
-          ),
-          httpOnly: true
-        }
-
-        res.cookie('jwt', token, cookieOptions)
-
-        // Return success
-        return res.status(200).json({
-          status: 'success',
-          message: 'Đăng nhập thành công',
-          token
-        })
-      })
-    } catch (error) {
-      console.log(error)
-      return res.status(500).json({
-        status: 'error',
-        message: 'Đã xảy ra lỗi khi đăng nhập'
-      })
+        });
     }
-  }
+};
 
   // LOGOUT
   logout = (req, res) => {
@@ -244,46 +235,48 @@ class AdminController {
   // CATEGORY API
   updateCategory = async (req, res) => {
     try {
-      const { categoryId, categoryName } = req.body;
-      
-      // Validate
-      if (!categoryId || !categoryName) {
-        return res.status(400).json({
-          status: 'fail',
-          message: 'Thiếu thông tin cần thiết'
-        });
-      }
-
-      // Update database
-      let sql = 'UPDATE categories SET category_name = ? WHERE category_id = ?';
-      let values = [categoryName, categoryId];
-
-      // Check if there's an image upload
-      if (req.files && req.files.image) {
-        const image = req.files.image;
-        const filename = `category_${categoryId}_${categoryName.toLowerCase().replace(/\s+/g, '_')}.${image.name.split('.').pop()}`;
+        console.log('[ADMIN] Update category request:', req.body);
         
-        // Move the file
-        const uploadPath = path.join(__dirname, '../public/imgs/categories/', filename);
-        await image.mv(uploadPath);
+        const { categoryId, categoryName, categoryType } = req.body;
+        
+        // Validate
+        if (!categoryId || !categoryName || !categoryType) {
+            return res.status(400).json({
+                status: 'fail',
+                message: 'Thiếu thông tin cần thiết'
+            });
+        }
 
-        // Update SQL to include image
-        sql = 'UPDATE categories SET category_name = ?, category_img = ? WHERE category_id = ?';
-        values = [categoryName, filename, categoryId];
-      }
+        // Update database
+        let sql = 'UPDATE categories SET category_name = ?, categorry_type = ? WHERE category_id = ?';
+        let values = [categoryName, categoryType, categoryId];
 
-      await query(sql, values);
-      
-      res.status(200).json({
-        status: 'success',
-        message: 'Cập nhật danh mục thành công'
-      });
+        // Check if there's an image upload
+        if (req.files && req.files.image) {
+            const image = req.files.image;
+            const filename = `category_${categoryId}_${categoryName.toLowerCase().replace(/\s+/g, '_')}.${image.name.split('.').pop()}`;
+            
+            // Move the file
+            const uploadPath = path.join(__dirname, '../public/imgs/categories/', filename);
+            await image.mv(uploadPath);
+
+            // Update SQL to include image
+            sql = 'UPDATE categories SET category_name = ?, categorry_type = ?, category_img = ? WHERE category_id = ?';
+            values = [categoryName, categoryType, filename, categoryId];
+        }
+
+        await query(sql, values);
+        
+        res.status(200).json({
+            status: 'success',
+            message: 'Cập nhật danh mục thành công'
+        });
     } catch (error) {
-      console.error('Error updating category:', error);
-      res.status(500).json({
-        status: 'error',
-        message: 'Đã có lỗi xảy ra khi cập nhật danh mục'
-      });
+        console.error('Error updating category:', error);
+        res.status(500).json({
+            status: 'error',
+            message: 'Đã có lỗi xảy ra khi cập nhật danh mục'
+        });
     }
   }
 
@@ -735,25 +728,29 @@ class AdminController {
 
   // USERS
   users = async (req, res) => {
-    const user = req.user;
+    try {
+      const user = req.admin;
 
-    // Fetch users (excluding admins)
-    const users = await query(`
-      SELECT *
-      FROM users
-      WHERE role_id = 2
-      ORDER BY user_id DESC
-    `);
+      // Get all users without filtering by role_id (which doesn't exist in your schema)
+      const users = await query(`
+        SELECT *
+        FROM users
+        ORDER BY user_id DESC
+      `);
 
-    res.render('admin/pages/users_admin', {
-      title: {
-        title: 'Quản lý người dùng'
-      },
-      user: user,
-      users
-    });
+      res.render('admin/pages/users_admin', {
+        title: {
+          title: 'Quản lý người dùng'
+        },
+        user: user,
+        users
+      });
+    } catch (error) {
+      console.error('[ADMIN] Error loading users:', error.message);
+      res.status(500).send("Error loading users page");
+    }
   };
-
+ 
   // Add this method to your controller
   category_update_tool = (req, res) => {
     return res.render('admin/pages/category_update_tool', {
