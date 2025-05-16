@@ -282,39 +282,47 @@ class AdminController {
 
   deleteCategory = async (req, res) => {
     try {
-      const categoryId = req.params.id;
-      
-      // Check if category exists
-      const category = await query('SELECT * FROM categories WHERE category_id = ?', [categoryId]);
-      if (category.length === 0) {
-        return res.status(404).json({
-          status: 'fail',
-          message: 'Không tìm thấy danh mục'
+        const categoryId = req.params.id;
+        
+        // Check if category exists
+        const category = await query('SELECT * FROM categories WHERE category_id = ?', [categoryId]);
+        if (category.length === 0) {
+            return res.status(404).json({
+                status: 'fail',
+                message: 'Không tìm thấy danh mục'
+            });
+        }
+        
+        // Get the image path to delete later
+        const categoryImage = category[0].category_img;
+        
+        // MODIFIED: Instead of checking and preventing deletion, update products to category_id = 0
+        await query('UPDATE products SET category_id = 0 WHERE category_id = ?', [categoryId]);
+        console.log(`Updated products with category_id ${categoryId} to have category_id = 0`);
+        
+        // Delete category from database
+        await query('DELETE FROM categories WHERE category_id = ?', [categoryId]);
+        console.log(`Deleted category with ID ${categoryId} from database`);
+        
+        // Delete image file if exists
+        if (categoryImage) {
+            const imagePath = path.join(__dirname, '../public/imgs/categories/', categoryImage);
+            if (fs.existsSync(imagePath)) {
+                fs.unlinkSync(imagePath);
+                console.log(`Deleted category image: ${imagePath}`);
+            }
+        }
+        
+        res.status(200).json({
+            status: 'success',
+            message: 'Xóa danh mục thành công'
         });
-      }
-      
-      // Check if category has products
-      const products = await query('SELECT COUNT(*) as count FROM products WHERE category_id = ?', [categoryId]);
-      if (products[0].count > 0) {
-        return res.status(400).json({
-          status: 'fail',
-          message: 'Không thể xóa danh mục này vì có sản phẩm đang sử dụng'
-        });
-      }
-
-      // Delete category
-      await query('DELETE FROM categories WHERE category_id = ?', [categoryId]);
-      
-      res.status(200).json({
-        status: 'success',
-        message: 'Xóa danh mục thành công'
-      });
     } catch (error) {
-      console.error('Error deleting category:', error);
-      res.status(500).json({
-        status: 'error',
-        message: 'Đã có lỗi xảy ra khi xóa danh mục'
-      });
+        console.error('Error deleting category:', error);
+        res.status(500).json({
+            status: 'error',
+            message: 'Đã có lỗi xảy ra khi xóa danh mục'
+        });
     }
   }
 
