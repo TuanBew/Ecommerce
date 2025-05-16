@@ -5,15 +5,31 @@ const router = express.Router()
 const accountController = require('../controllers/customer/accountController.js')
 const authMiddleware = require('../middleware/authMiddleware.js')
 
-router.get('/information', authMiddleware.isLoggedIn, accountController.information)
-router.get('/edit-information', authMiddleware.isLoggedIn, accountController.getEditInformation)
-router.post('/edit-information', authMiddleware.isLoggedIn, accountController.editInformation)
-router.get('/purchase', authMiddleware.isLoggedIn, accountController.purchaseHistory)
-router.get('/purchase/:order_id', authMiddleware.isLoggedIn, accountController.purchaseDetail)
-router.get('/feedback', authMiddleware.isLoggedIn, accountController.feedback)
-router.post('/feedback', authMiddleware.isLoggedIn, accountController.sendFeedback)
-router.get('/warranty-claim', authMiddleware.isLoggedIn, accountController.warrantyClaim)
-router.get('/mobile-account', authMiddleware.isLoggedIn, accountController.mobileAccount)
-router.get('/changePassword', authMiddleware.isLoggedIn, accountController.changePassword)
+// Account dashboard
+router.get('/', authMiddleware.isLoggedIn, (req, res) => {
+    res.render('account/dashboard', { title: 'Account Dashboard' });
+});
+
+// Account profile
+router.get('/profile', authMiddleware.isLoggedIn, (req, res) => {
+    res.render('account/profile', { title: 'Profile' });
+});
+
+// Update profile
+router.post('/profile', authMiddleware.isLoggedIn, (req, res) => {
+    // Logic to update profile would go here
+    res.redirect('/account/profile');
+});
+
+// Change password
+router.get('/change-password', authMiddleware.isLoggedIn, (req, res) => {
+    res.render('account/change-password', { title: 'Change Password' });
+});
+
+// Process password change
+router.post('/change-password', authMiddleware.isLoggedIn, (req, res) => {
+    // Logic to change password would go here
+    res.redirect('/account');
+});
 
 module.exports = router

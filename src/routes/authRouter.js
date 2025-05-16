@@ -1,23 +1,38 @@
-const express = require('express')
-const router = express.Router()
+const express = require('express');
+const router = express.Router();
 
 // import controller
-const authController = require('../controllers/customer/authController.js')
+const authController = require('../controllers/customer/authController.js');
 
 // import middleware
-const middleware = require('../middleware/authMiddleware.js')
+const middleware = require('../middleware/authMiddleware.js');
 
-router.post('/findUser', authController.findUser)
-router.get('/register', middleware.checkAuth, authController.register)
-router.post('/register', middleware.checkAuth, authController.submitRegister)
-router.get('/login', middleware.checkAuth, authController.login)
-router.post('/login', middleware.checkAuth, authController.submitLogin)
-router.get('/logout', middleware.checkUnAuth, authController.logout)
-router.get('/forgot', authController.forgotPassword)
-router.post('/forgot', authController.forgotPasswordPost)
-router.post('/reset', authController.resetPassword)
-// router.get('/resetAuth', authController.resetPasswordAuth)
+// Login page
+router.get('/login', (req, res) => {
+    res.render('auth/login', { title: 'Login' });
+});
 
-router.post('/changePass', middleware.isLoggedIn, authController.changePassPost);
+// Login process
+router.post('/login', (req, res) => {
+    // Authentication logic would go here
+    res.redirect('/');
+});
 
-module.exports = router
+// Register page
+router.get('/register', (req, res) => {
+    res.render('auth/register', { title: 'Register' });
+});
+
+// Register process
+router.post('/register', (req, res) => {
+    // Registration logic would go here
+    res.redirect('/auth/login');
+});
+
+// Logout
+router.get('/logout', (req, res) => {
+    // Logout logic would go here
+    res.redirect('/');
+});
+
+module.exports = router;

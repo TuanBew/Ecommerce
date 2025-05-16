@@ -1,33 +1,87 @@
 const express = require('express')
-const router = express.Router();
+const router = express.Router()
+const path = require('path')
 
-// import controller
-const authAdminController = require('../controllers/admin/authAdminController.js')
-const dashboardAdminController = require('../controllers/admin/dashboardAdminController.js')
-const cateAdminController = require('../controllers/admin/cateAdminController.js')
+const adminController = require('../controllers/AdminController')
 
-// import middleware
-const adminMiddleware = require('../middleware/adminMiddleware.js')
+// Middleware to verify admin access
+const adminMiddleware = require('../middlewares/AdminMiddleware')
 
-// admin auth
-router.get('/login', adminMiddleware.checkAuth, authAdminController.getLogin)
-router.post('/login', adminMiddleware.checkAuth, authAdminController.postLogin)
-router.get('/logout', adminMiddleware.checkUnAuth, authAdminController.getLogout)
+// Admin Dashboard
+router.get('/', adminMiddleware.isAdmin, adminController.index)
 
-// admin dashboard
-router.get('/dashboard', adminMiddleware.isLoggedIn, dashboardAdminController.getDashboard)
-router.get('/dashboard/getChart', adminMiddleware.isLoggedIn, dashboardAdminController.getChart)
-router.get('/', adminMiddleware.isLoggedIn, dashboardAdminController.getDashboard)
+// Admin login
+router.get('/login', adminController.login)
+router.post('/login', adminController.login_post)
 
-// admin cate management
-router.get('/categories_admin/add', adminMiddleware.isLoggedIn, cateAdminController.addCategories)
-router.get('/categories_admin', adminMiddleware.isLoggedIn, cateAdminController.getCategories)
-router.get('/categories_admin/edit/:id', adminMiddleware.isLoggedIn, cateAdminController.editCategory)
-router.post('/categories_admin/add', adminMiddleware.isLoggedIn, cateAdminController.postAddCategory)
-router.post('/categories_admin/edit/:id', adminMiddleware.isLoggedIn, cateAdminController.postEditCategory)
+// Admin logout
+router.get('/logout', adminController.logout)
 
-// admin product management
-router.get('/products_admin/add', adminMiddleware.isLoggedIn, cateAdminController.addProducts)
-router.get('/products_admin', adminMiddleware.isLoggedIn, cateAdminController.getProducts)
+// Categories Manager
+router.get('/categories_admin', adminMiddleware.isAdmin, adminController.categories)
+router.get('/category_add_admin', adminMiddleware.isAdmin, adminController.category_add)
+router.get('/category_edit_admin/:id', adminMiddleware.isAdmin, adminController.category_edit)
+
+// Category Update Tool
+router.get('/category-update-tool', adminMiddleware.isAdmin, adminController.category_update_tool)
+
+// Category Update API
+router.post('/api/update-category', adminMiddleware.isAdmin, adminController.updateCategory)
+router.delete('/api/delete-category/:id', adminMiddleware.isAdmin, adminController.deleteCategory)
+router.post('/api/add-category', adminMiddleware.isAdmin, adminController.addCategory)
+
+// Category API
+router.get('/api/categories', adminMiddleware.isAdmin, adminController.getCategories)
+router.get('/api/categories/:id', adminMiddleware.isAdmin, adminController.getCategory)
+
+// Products Manager
+router.get('/products_admin', adminMiddleware.isAdmin, adminController.products)
+router.get('/product_add_admin', adminMiddleware.isAdmin, adminController.product_add)
+router.get('/product_edit_admin/:id', adminMiddleware.isAdmin, adminController.product_edit)
+
+// Product Update API
+router.post('/api/update-product', adminMiddleware.isAdmin, adminController.updateProduct)
+router.delete('/api/delete-product/:id', adminMiddleware.isAdmin, adminController.deleteProduct)
+router.post('/api/add-product', adminMiddleware.isAdmin, adminController.addProduct)
+
+// Orders Manager
+router.get('/orders_admin', adminMiddleware.isAdmin, adminController.orders)
+router.get('/order_details_admin/:id', adminMiddleware.isAdmin, adminController.order_details)
+
+// Order Update API
+router.post('/api/update-order-status', adminMiddleware.isAdmin, adminController.updateOrderStatus)
+
+// Users Manager
+router.get('/users_admin', adminMiddleware.isAdmin, adminController.users)
+
+// Admin dashboard
+router.get('/', (req, res) => {
+    res.render('admin/dashboard', { title: 'Admin Dashboard' });
+});
+
+// Products management
+router.get('/products', (req, res) => {
+    res.render('admin/products', { title: 'Manage Products' });
+});
+
+// Add product form
+router.get('/products/add', (req, res) => {
+    res.render('admin/product-form', { title: 'Add Product' });
+});
+
+// User management
+router.get('/users', (req, res) => {
+    res.render('admin/users', { title: 'Manage Users' });
+});
+
+// Order management
+router.get('/orders', (req, res) => {
+    res.render('admin/orders', { title: 'Manage Orders' });
+});
+
+// Reports
+router.get('/reports', (req, res) => {
+    res.render('admin/reports', { title: 'Reports' });
+});
 
 module.exports = router

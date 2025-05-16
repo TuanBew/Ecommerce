@@ -189,13 +189,13 @@
 	<ul class="header__menu menu">
 		<li>
 			<div class="menu__cate menu__item">
-				<p class="menu__item-p">Điện máy</p>
+				<p class="menu__item-p">Laptop</p>
 				<span class="material-symbols-outlined"> expand_more </span>
 			</div>
 
 			<ul class="header__cate-dropdown cate-dropdown">
 				<% header.cates.forEach(cate => { %>
-				<% if (cate.categorry_type == 'Điện máy') { %>
+				<% if (cate.categorry_type == 'Laptop') { %>
 				<li class="header__cate-dropdown-wrapper">
 					<a href="/search/results?category_id=<%= cate.category_id %>" class="cate-dropdown__item">
 						<img src="/imgs/categories/<%= cate.category_img %>" alt="<%= cate.category_name %>">
@@ -259,13 +259,13 @@
 		</li>
 		<li>
 			<div class="menu__cate menu__item">
-				<p class="menu__item-p">Điện tử</p>
+				<p class="menu__item-p">PC</p>
 				<span class="material-symbols-outlined"> expand_more </span>
 			</div>
 
 			<ul class="header__cate-dropdown cate-dropdown">
 				<% header.cates.forEach(cate => { %>
-				<% if (cate.categorry_type == 'Điện tử') { %>
+				<% if (cate.categorry_type == 'PC') { %>
 				<li class="header__cate-dropdown-wrapper">
 					<a href="/search/results?category_id=<%= cate.category_id %>" class="cate-dropdown__item">
 						<img src="/imgs/categories/<%= cate.category_img %>" alt="<%= cate.category_name %>">
@@ -328,13 +328,13 @@
 		</li>
 		<li>
 			<div class="menu__cate menu__item">
-				<p class="menu__item-p">Nhà bếp</p>
+				<p class="menu__item-p">Linh Kiện</p>
 				<span class="material-symbols-outlined"> expand_more </span>
 			</div>
 
 			<ul class="header__cate-dropdown cate-dropdown">
 				<% header.cates.forEach(cate => { %>
-				<% if (cate.categorry_type == 'Đồ dùng nhà bếp') { %>
+				<% if (cate.categorry_type == 'Linh Kiện') { %>
 				<li class="header__cate-dropdown-wrapper">
 					<a href="/search/results?category_id=<%= cate.category_id %>" class="cate-dropdown__item">
 						<img src="/imgs/categories/<%= cate.category_img %>" alt="<%= cate.category_name %>">
@@ -398,13 +398,13 @@
 		</li>
 		<li>
 			<div class="menu__cate menu__item">
-				<p class="menu__item-p">Gia dụng</p>
+				<p class="menu__item-p">Gaming Gear</p>
 				<span class="material-symbols-outlined"> expand_more </span>
 			</div>
 
 			<ul class="header__cate-dropdown cate-dropdown">
 				<% header.cates.forEach(cate => { %>
-				<% if (cate.categorry_type == 'Gia dụng') { %>
+				<% if (cate.categorry_type == 'Gaming Gear') { %>
 				<li class="header__cate-dropdown-wrapper">
 					<a href="/search/results?category_id=<%= cate.category_id %>" class="cate-dropdown__item">
 						<img src="/imgs/categories/<%= cate.category_img %>" alt="<%= cate.category_name %>">
@@ -419,7 +419,6 @@
 								<span class="material-symbols-outlined"> chevron_right </span>
 							</a>
 						</div>
-
 						<% if(cate.category_count) { %>
 						<div class="cate-dropdown__product">
 							<% cate.bestSellerProductsOfCates.forEach(product => { %>

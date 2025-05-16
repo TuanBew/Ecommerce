@@ -19,4 +19,24 @@ router.get('/short_cart_list', authMiddleware.isLoggedIn, generalController.getS
 // [POST] /general/check_cart
 router.get('/check_cart', authMiddleware.isLoggedIn, generalController.getShortCartList)
 
+// FAQ page
+router.get('/faq', (req, res) => {
+    res.render('general/faq', { title: 'FAQ' });
+});
+
+// Terms and conditions
+router.get('/terms', (req, res) => {
+    res.render('general/terms', { title: 'Terms & Conditions' });
+});
+
+// Privacy policy
+router.get('/privacy', (req, res) => {
+    res.render('general/privacy', { title: 'Privacy Policy' });
+});
+
+// Help center
+router.get('/help', (req, res) => {
+    res.render('general/help', { title: 'Help Center' });
+});
+
 module.exports = router

@@ -16,4 +16,19 @@ router.get('/error', authMiddleware.getLoggedIn, siteController.error)
 router.get('/feature_development', siteController.development)
 router.get('/', authMiddleware.getLoggedIn, siteController.index)
 
+// Home page
+router.get('/', (req, res) => {
+    res.render('index', { title: 'Home' });
+});
+
+// About page
+router.get('/about', (req, res) => {
+    res.render('about', { title: 'About Us' });
+});
+
+// Contact page
+router.get('/contact', (req, res) => {
+    res.render('contact', { title: 'Contact Us' });
+});
+
 module.exports = router

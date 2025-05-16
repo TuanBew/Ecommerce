@@ -1,0 +1,32 @@
+<%- include('../components/head.ejs') %>
+<%- include('../components/header.ejs') %>
+
+<div class="container my-5">
+  <h1 class="mb-4">Danh mục sản phẩm</h1>
+  
+  <div class="row">
+    <% if (categories && categories.length > 0) { %>
+      <% categories.forEach(category => { %>
+        <div class="col-md-4 mb-4">
+          <div class="card">
+            <% if (category.category_img) { %>
+              <img src="/imgs/categories/<%= category.category_img %>" class="card-img-top" alt="<%= category.category_name %>">
+            <% } else { %>
+              <div class="card-img-top bg-light text-center py-5">No Image</div>
+            <% } %>
+            <div class="card-body">
+              <h5 class="card-title"><%= category.category_name %></h5>
+              <a href="/category/<%= category.category_id %>" class="btn btn-primary">Xem sản phẩm</a>
+            </div>
+          </div>
+        </div>
+      <% }); %>
+    <% } else { %>
+      <div class="col">
+        <p>Không có danh mục nào.</p>
+      </div>
+    <% } %>
+  </div>
+</div>
+
+<%- include('../components/footer.ejs') %>
