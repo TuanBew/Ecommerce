@@ -1,6 +1,7 @@
-const db = require('../../config/db/connect')
+const db = require('../../config/db/connect');
+const util = require('util');
+const query = util.promisify(db.query).bind(db);
 const bcrypt = require('bcryptjs')
-
 
 const auth = function () { }
 
@@ -91,5 +92,89 @@ auth.resetPassword = async (phone, password, callback) => {
         callback(err, result)
     })
 }
+
+// Get user by email
+auth.getUserByEmail = async (email) => {
+    try {
+        const getUserQuery = `
+            SELECT * FROM users
+            WHERE user_email = ?
+            LIMIT 1
+        `;
+        
+        const users = await query(getUserQuery, [email]);
+        return users.length > 0 ? users[0] : null;
+    } catch (error) {
+        console.error("Error getting user by email:", error);
+        return null;
+    }
+};
+
+// Create new user
+auth.createUser = async (userData) => {
+    try {
+        // Insert into users table
+        const insertUserQuery = `
+            INSERT INTO users (
+                user_fullname,
+                user_email,
+                user_password,
+                user_phone,
+                role_id,
+                user_created_date
+            ) VALUES (?, ?, ?, ?, 2, NOW())
+        `;
+        
+        const userResult = await query(insertUserQuery, [
+            userData.fullname,
+            userData.email,
+            userData.password,
+            userData.phone
+        ]);
+        
+        const userId = userResult.insertId;
+        
+        // Insert into customers table
+        const insertCustomerQuery = `
+            INSERT INTO customers (user_id) VALUES (?)
+        `;
+        
+        await query(insertCustomerQuery, [userId]);
+        
+        // Get the newly created user
+        const getNewUserQuery = `
+            SELECT u.*, c.customer_id
+            FROM users u
+            JOIN customers c ON u.user_id = c.user_id
+            WHERE u.user_id = ?
+            LIMIT 1
+        `;
+        
+        const newUsers = await query(getNewUserQuery, [userId]);
+        return newUsers.length > 0 ? newUsers[0] : null;
+    } catch (error) {
+        console.error("Error creating user:", error);
+        throw error;
+    }
+};
+
+// Get user by phone
+auth.getUserByPhone = async (phone) => {
+    try {
+        const getUserQuery = `
+            SELECT users.*, customers.customer_id
+            FROM users
+            LEFT JOIN customers ON users.user_id = customers.user_id
+            WHERE user_phone = ?
+            LIMIT 1
+        `;
+        
+        const users = await query(getUserQuery, [phone]);
+        return users.length > 0 ? users[0] : null;
+    } catch (error) {
+        console.error("Error getting user by phone:", error);
+        return null;
+    }
+};
 
 module.exports = auth

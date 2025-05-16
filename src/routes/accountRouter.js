@@ -1,35 +1,23 @@
-const express = require('express')
-const router = express.Router()
+const express = require('express');
+const router = express.Router();
 
-// import controller
-const accountController = require('../controllers/customer/accountController.js')
-const authMiddleware = require('../middleware/authMiddleware.js')
+// Import controller
+const accountController = require('../controllers/customer/accountController.js');
 
-// Account dashboard
-router.get('/', authMiddleware.isLoggedIn, (req, res) => {
-    res.render('account/dashboard', { title: 'Account Dashboard' });
-});
+// Import middleware
+const authMiddleware = require('../middleware/authMiddleware.js');
 
-// Account profile
-router.get('/profile', authMiddleware.isLoggedIn, (req, res) => {
-    res.render('account/profile', { title: 'Profile' });
-});
+// Account routes
+router.get('/information', authMiddleware.isLoggedIn, accountController.information);
+router.post('/information', authMiddleware.isLoggedIn, accountController.updateInformation);
 
-// Update profile
-router.post('/profile', authMiddleware.isLoggedIn, (req, res) => {
-    // Logic to update profile would go here
-    res.redirect('/account/profile');
-});
+router.get('/purchase', authMiddleware.isLoggedIn, accountController.purchase);
+router.get('/purchase/:id', authMiddleware.isLoggedIn, accountController.purchaseDetail);
 
-// Change password
-router.get('/change-password', authMiddleware.isLoggedIn, (req, res) => {
-    res.render('account/change-password', { title: 'Change Password' });
-});
+router.get('/address', authMiddleware.isLoggedIn, accountController.address);
+router.post('/address', authMiddleware.isLoggedIn, accountController.updateAddress);
 
-// Process password change
-router.post('/change-password', authMiddleware.isLoggedIn, (req, res) => {
-    // Logic to change password would go here
-    res.redirect('/account');
-});
+router.get('/password', authMiddleware.isLoggedIn, accountController.password);
+router.post('/password', authMiddleware.isLoggedIn, accountController.updatePassword);
 
-module.exports = router
+module.exports = router;

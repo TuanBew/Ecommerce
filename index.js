@@ -25,7 +25,6 @@ app.use(express.static(path.join('src', 'public')))
 
 //parse URL-encoded bodies
 app.use(bodyParser.json());
-app.use(express.urlencoded({ extended: true }))
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cookieParser('secret'))
 

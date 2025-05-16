@@ -37,109 +37,81 @@ function startAutoSlide() {
 startAutoSlide();
 
 
-const passwordInput = document.getElementById("password");
-const togglePasswordButton = document.getElementById("togglePassword");
+document.addEventListener('DOMContentLoaded', function() {
+    const loginForm = document.getElementById('form');
+    const phoneNumberInput = document.getElementById('phoneNumber');
+    const passwordInput = document.getElementById('password');
+    const togglePassword = document.getElementById('togglePassword');
 
-togglePasswordButton.addEventListener("click", function () {
-    const isVisible = togglePasswordButton.getAttribute("data-visible") === "true";
+    // Password visibility toggle
+    if (togglePassword) {
+        togglePassword.addEventListener('click', function() {
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+            
+            // Toggle eye icon
+            const eyeIcon = togglePassword.querySelector('.material-symbols-outlined');
+            if (type === 'password') {
+                eyeIcon.textContent = 'visibility';
+            } else {
+                eyeIcon.textContent = 'visibility_off';
+            }
+        });
+    }
 
-    if (isVisible) {
-        passwordInput.type = "Password"; // Ẩn mật khẩu
-        togglePasswordButton.setAttribute("data-visible", "false");
-        togglePasswordButton.querySelector(".material-symbols-outlined").textContent = "visibility";
-
-
-    } else {
-        passwordInput.type = "text"; // Hiển thị mật khẩu
-        togglePasswordButton.setAttribute("data-visible", "true");
-        togglePasswordButton.querySelector(".material-symbols-outlined").textContent = "visibility_off";
-
+    // Form submission
+    if (loginForm) {
+        loginForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Clear previous errors
+            document.querySelectorAll('.login__error').forEach(el => {
+                el.textContent = '';
+            });
+            
+            // Get form data
+            const phoneNumber = phoneNumberInput.value.trim();
+            const password = passwordInput.value.trim();
+            
+            // Simple validation
+            let hasError = false;
+            
+            if (!phoneNumber) {
+                document.querySelector('.login__input-wrap:nth-child(1) .login__error').textContent = 'Vui lòng nhập số điện thoại';
+                hasError = true;
+            }
+            
+            if (!password) {
+                document.querySelector('.login__input-wrap:nth-child(2) .login__error').textContent = 'Vui lòng nhập mật khẩu';
+                hasError = true;
+            }
+            
+            if (hasError) {
+                return;
+            }
+            
+            // Submit form via AJAX
+            fetch('/auth/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ phoneNumber, password })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // Login successful, redirect to homepage
+                    window.location.href = data.redirectUrl || '/';
+                } else {
+                    // Show error
+                    document.querySelector('.login__input-wrap:nth-child(1) .login__error').textContent = data.message;
+                }
+            })
+            .catch(error => {
+                console.error('Login error:', error);
+                document.querySelector('.login__input-wrap:nth-child(1) .login__error').textContent = 'Đã xảy ra lỗi khi đăng nhập';
+            });
+        });
     }
 });
-
-const form = document.getElementById('form');
-const phoneNumber = document.getElementById('phoneNumber');
-const password = document.getElementById('password');
-
-
-form.addEventListener('submit', e => {
-    e.preventDefault();
-
-    validateInput();
-});
-
-
-const setError = (element, message) => {
-    const inputControl = element.parentElement;
-    const errorDisplay = inputControl.querySelector(`.login__error`);
-
-    errorDisplay.innerText = message;
-    inputControl.classList.add('error');
-    inputControl.classList.remove('error');
-}
-
-const setSuccess = element => {
-    const inputControl = element.parentElement;
-    const errorDisplay = inputControl.querySelector(`.login__error`);
-
-    errorDisplay.innerText = '';
-    inputControl.classList.add('success');
-    inputControl.classList.remove('error');
-}
-
-const isValidPhoneNumber = phoneNumber => {
-    const re = /^[\+]?[(]?[0-9]{3}[)]?[-\s\.]?[0-9]{3}[-\s\.]?[0-9]{4,6}$/im;
-    return re.test(String(phoneNumber).trim());
-}
-
-const validateInput = () => {
-
-    const PhoneNumberValue = phoneNumber.value.trim();
-    const PasswordValue = password.value.trim();
-
-    let isAllValid = true;
-
-    if (PhoneNumberValue === '') {
-        setError(phoneNumber, 'Vui lòng nhập số điện thoại!');
-        isAllValid = false;
-    } else if (!isValidPhoneNumber(PhoneNumberValue)) {
-        setError(phoneNumber, 'Số điện thoại không đúng định dạng!')
-        isAllValid = false;
-    } else {
-        setSuccess(phoneNumber);
-    }
-
-    if (PasswordValue === '') {
-        setError(password, 'Vui lòng nhập mật khẩu!');
-        isAllValid = false;
-    } else if (PasswordValue.length < 8) {
-        setError(password, 'Mật khẩu phải ít nhất 8 ký tự!')
-        isAllValid = false;
-    } else {
-        setSuccess(password);
-    }
-
-    if (isAllValid) {
-        const login = {
-            phoneNumber: phoneNumber.value.trim(),
-            password: password.value.trim()
-        }
-        fetch("/auth/login", {
-            method: 'POST',
-            body: JSON.stringify(login),
-            headers: {
-                "Content-Type": "application/json"
-            }
-        }).then(res => res.json()).then(back => {
-            if (back.status == "error") {
-                setError(phoneNumber, back.error);
-            }
-            else if (back.status == "error2") {
-                setError(password, back.error);
-            }
-            else {
-                window.location.href = '/'
-            }
-        })
-    }
-};

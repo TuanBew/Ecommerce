@@ -127,4 +127,82 @@ account.viewFeedback = async (customer_id, order_id, product_variant_id) => {
     }  
 }
 
+// Get user orders
+account.getOrders = async (userId) => {
+    try {
+        const getOrders = `
+            SELECT * FROM orders 
+            WHERE user_id = ? 
+            ORDER BY order_date DESC
+        `;
+        const orders = await query(getOrders, [userId]);
+        return orders;
+    } catch (error) {
+        console.error("Error getting orders:", error);
+        return [];
+    }
+}
+
+// Get order details
+account.getOrderDetails = async (orderId, userId) => {
+    try {
+        // Get order
+        const getOrder = `
+            SELECT * FROM orders 
+            WHERE order_id = ? AND user_id = ?
+        `;
+        const orders = await query(getOrder, [orderId, userId]);
+        
+        if (orders.length === 0) {
+            return null;
+        }
+        
+        // Get order items
+        const getOrderItems = `
+            SELECT od.*, p.product_name, p.product_price, pi.image_name
+            FROM order_details od
+            JOIN products p ON od.product_id = p.product_id
+            LEFT JOIN (
+                SELECT product_id, MIN(image_id) as min_image_id, image_name
+                FROM product_images
+                GROUP BY product_id
+            ) pi ON p.product_id = pi.product_id
+            WHERE od.order_id = ?
+        `;
+        
+        const orderItems = await query(getOrderItems, [orderId]);
+        
+        return {
+            orderInfo: orders[0],
+            items: orderItems
+        };
+    } catch (error) {
+        console.error("Error getting order details:", error);
+        return null;
+    }
+}
+
+// Update user information
+account.updateUserInfo = async (userId, userData) => {
+    try {
+        const updateUser = `
+            UPDATE users 
+            SET user_fullname = ?, user_phone = ?, user_address = ?
+            WHERE user_id = ?
+        `;
+        
+        await query(updateUser, [
+            userData.fullname,
+            userData.phone,
+            userData.address,
+            userId
+        ]);
+        
+        return true;
+    } catch (error) {
+        console.error("Error updating user information:", error);
+        return false;
+    }
+}
+
 module.exports = account

@@ -1,84 +1,66 @@
+const jwt = require('jsonwebtoken');
+const util = require('util');
 const db = require('../config/db/connect');
-const jwt = require('jsonwebtoken')
-const general = require('../models/general.model')
-const { promisify } = require('util')
+const query = util.promisify(db.query).bind(db);
 
-exports.isLoggedIn = async (req, res, next) => {
-    console.log(`isLoggedIn: ${req.cookies.userSave}`);
-    if (req.cookies.userSave) {
-        try {
-            // 1. Verify the token
-            const decoded = await promisify(jwt.verify)(req.cookies.userSave,
-                process.env.JWT_SECRET
-            );
-            console.log(decoded);
+const authMiddleware = function () { };
 
-            // 2. Check if the user still exist
-            db.query('SELECT * FROM view_user WHERE user_id = ?', [decoded.id], (err, results) => {
-                if (!results) {
-                    return next();
-                }
-
-                req.user = results[0];
-                next();
-            });
-        } catch (err) {
-            console.log(err)
-            next()
+// Check if user is logged in and redirect to login if not
+authMiddleware.isLoggedIn = async (req, res, next) => {
+    try {
+        if (!req.cookies.jwt) {
+            return res.redirect('/auth/login');
         }
-    } else {
-        res.status(401).redirect('/auth/login')
-    }
-}
 
-exports.checkAuth = (req, res, next) => {
-    console.log(`checkAuth: ${req.cookies.userSave}`)
-    if (req.cookies.userSave) {
-        res.redirect('/')
-    }
-    else {
-        return next();
-    }
-}
-
-exports.checkUnAuth = (req, res, next) => {
-    console.log(`checkUnAuth: ${req.cookies.userSave}`)
-    if (!req.cookies.userSave) {
-        res.status(401).redirect('/')
-    }
-    else {
-        return next();
-    }
-}
-
-exports.getLoggedIn = async (req, res, next) => {
-    console.log(`getLoggedIn: ${req.cookies.userSave}`);
-    if (req.cookies.userSave) {
-        try {
-            // 1. Verify the token
-            const decoded = await promisify(jwt.verify)(req.cookies.userSave,
-                process.env.JWT_SECRET
-            );
-            console.log(decoded);
-
-            // 2. Check if the user still exist
-            db.query('SELECT * FROM view_user WHERE user_id = ?', [decoded.id], (err, results) => {
-                if (!results) {
-                    return next();
-                }
-
-                results.forEach((result) => {
-                    result.user_birth_format = general.toDDMMYYYY(new Date(result.user_birth))
-                })
-
-                req.user = results[0];
-                next();
-            });
-        } catch (err) {
-            console.log(err)
-            next();
+        const decoded = jwt.verify(req.cookies.jwt, process.env.JWT_SECRET);
+        
+        // Check if user exists
+        const users = await query(`
+            SELECT u.*, c.customer_id
+            FROM users u
+            LEFT JOIN customers c ON u.user_id = c.user_id
+            WHERE u.user_id = ? AND u.role_id = 2
+        `, [decoded.user_id]);
+        
+        if (users.length === 0) {
+            res.clearCookie('jwt', { path: '/' });
+            return res.redirect('/auth/login');
         }
-    } else {
+        
+        // User is authenticated
+        req.user = users[0];
+        next();
+    } catch (error) {
+        console.error("Auth middleware error:", error);
+        res.clearCookie('jwt', { path: '/' });
+        res.redirect('/auth/login');
+    }
+};
+
+// Check if user is logged in but don't redirect (for optional authentication)
+authMiddleware.getLoggedIn = async (req, res, next) => {
+    try {
+        if (req.cookies.jwt) {
+            const decoded = jwt.verify(req.cookies.jwt, process.env.JWT_SECRET);
+            
+            const users = await query(`
+                SELECT u.*, c.customer_id
+                FROM users u
+                LEFT JOIN customers c ON u.user_id = c.user_id
+                WHERE u.user_id = ?
+            `, [decoded.user_id]);
+            
+            if (users.length > 0) {
+                req.user = users[0];
+            }
+        }
+        
+        next();
+    } catch (error) {
+        console.error("getLoggedIn middleware error:", error);
+        req.user = null;
         next();
     }
-}
+};
+
+module.exports = authMiddleware;
