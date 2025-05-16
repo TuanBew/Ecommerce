@@ -4,17 +4,19 @@
   "description": "Ecommerce Website",
   "main": "index.js",
   "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node index.js",
-    "dev": "nodemon index.js",
-    "update-categories": "node src/config/db/update_categories.js",
-    "restore-categories": "node src/config/db/update_categories.js --restore",
-    "verify-categories": "node src/config/db/verify_category_relationships.js"
+    "dev": "nodemon index.js"
   },
-  "author": "IE104.O12.Group2",
+  "keywords": [
+    "ecommerce",
+    "shopping"
+  ],
+  "author": "Group 2",
   "license": "ISC",
   "dependencies": {
     "bcryptjs": "^2.4.3",
-    "body-parser": "^1.20.2",
+    "body-parser": "^1.20.1",
     "cookie-parser": "^1.4.6",
     "dotenv": "^16.3.1",
     "ejs": "^3.1.9",
