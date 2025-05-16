@@ -1,5 +1,5 @@
-const general = require('../../models/general.model')
-const product = require('../../models/customer/product.model')
+const general = require('../general.model')
+const product = require('./product.model')
 const db = require('../../config/db/connect');
 const util = require('node:util')
 const jwt = require('jsonwebtoken')

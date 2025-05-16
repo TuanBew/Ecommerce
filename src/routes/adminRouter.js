@@ -22,6 +22,9 @@ router.get('/', adminMiddleware.isLoggedIn, dashboardAdminController.getDashboar
 // admin cate management
 router.get('/categories_admin/add', adminMiddleware.isLoggedIn, cateAdminController.addCategories)
 router.get('/categories_admin', adminMiddleware.isLoggedIn, cateAdminController.getCategories)
+router.get('/categories_admin/edit/:id', adminMiddleware.isLoggedIn, cateAdminController.editCategory)
+router.post('/categories_admin/add', adminMiddleware.isLoggedIn, cateAdminController.postAddCategory)
+router.post('/categories_admin/edit/:id', adminMiddleware.isLoggedIn, cateAdminController.postEditCategory)
 
 // admin product management
 router.get('/products_admin/add', adminMiddleware.isLoggedIn, cateAdminController.addProducts)

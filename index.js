@@ -7,6 +7,7 @@ const app = express()
 const dotdenv = require('dotenv').config();
 const bodyParser = require('body-parser')
 const cookieParser = require('cookie-parser')
+const fileUpload = require('express-fileupload');
 
 // connect to db
 const db = require('./src/config/db/connect');
@@ -27,6 +28,12 @@ app.use(bodyParser.json());
 app.use(express.urlencoded({ extended: true }))
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cookieParser('secret'))
+
+// Configure file upload middleware
+app.use(fileUpload({
+    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB max file size
+    createParentPath: true // Creates the directory path if it does not exist
+}));
 
 //app.use('/', require('./routes/index'))
 

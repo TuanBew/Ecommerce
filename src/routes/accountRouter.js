@@ -2,7 +2,7 @@ const express = require('express')
 const router = express.Router()
 
 // import controller
-const accountController = require('../controllers/customer/accountController')
+const accountController = require('../controllers/customer/accountController.js')
 const authMiddleware = require('../middleware/authMiddleware.js')
 
 router.get('/information', authMiddleware.isLoggedIn, accountController.information)

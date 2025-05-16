@@ -2,8 +2,8 @@ const db = require('../../config/db/connect');
 const util = require('node:util')
 const jwt = require('jsonwebtoken')
 const query = util.promisify(db.query).bind(db)
-const general = require('../../models/general.model');
-const index = require('../../models/customer/index.model')
+const general = require('../general.model');
+const index = require('./index.model')
 
 const search = function () { }
 

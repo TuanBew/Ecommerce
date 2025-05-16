@@ -2,7 +2,7 @@ const express = require('express')
 const router = express.Router()
 
 // import controller
-const generalController = require('../controllers/generalController')
+const generalController = require('../controllers/generalController.js')
 
 // import middleware
 const authMiddleware = require('../middleware/authMiddleware.js')

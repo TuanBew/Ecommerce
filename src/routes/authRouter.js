@@ -5,7 +5,7 @@ const router = express.Router()
 const authController = require('../controllers/customer/authController.js')
 
 // import middleware
-const middleware = require('../middleware/authMiddleware')
+const middleware = require('../middleware/authMiddleware.js')
 
 router.post('/findUser', authController.findUser)
 router.get('/register', middleware.checkAuth, authController.register)

@@ -222,19 +222,22 @@ body {
 }
 
 .dz-dropzone {
+    position: relative;
+    border: 0.125rem dashed var(--dark7);
+    border-radius: 0.5rem;
     cursor: pointer;
+    padding: 3rem 2rem;
+    transition: border-color 0.2s ease-in-out;
+    text-align: center;
 }
 
-.dz-dropzone-card {
-    width: 100%;
-    background-color: #f8fafd;
-    border: 0.125rem dashed var(--dark8);
-    border-radius: 0.5rem;
-    padding: 3rem 3rem;
-    display: -ms-flexbox;
-    display: flex;
-    -ms-flex-wrap: wrap;
-    flex-wrap: wrap;
+.dz-highlight {
+    border-color: var(--primary-color);
+    background-color: rgba(55, 125, 255, 0.05);
+}
+
+.dz-message {
+    text-align: center;
 }
 
 .dz-message-btn {
@@ -288,6 +291,31 @@ body {
     width: 6.5625rem;
     height: auto;
     border-radius: 0;
+}
+
+.current-image, .preview-image {
+    text-align: center;
+    margin-bottom: 20px;
+    padding: 15px;
+    border: 1px dashed var(--dark6);
+    border-radius: 8px;
+}
+
+.current-image img, .preview-image img {
+    max-width: 200px;
+    height: auto;
+    margin: 10px 0;
+}
+
+.current-image h5, .preview-image h5 {
+    font-size: 16px;
+    margin-bottom: 10px;
+}
+
+.current-image p {
+    font-size: 14px;
+    color: var(--dark4);
+    margin-top: 10px;
 }
 
 input[type="text"]:focus {

@@ -130,16 +130,17 @@
 							<td> <%= category.product_count ?? 'null' %> </td>
 							<td> <%= formatFunction.toCurrency(Number(category.revenue)) %></td>
 							<td class="action">
-								<ul class="action__dropdown dropdown">
-									<li>
-										<span class="material-symbols-rounded"> more_vert </span>
-										<ul class="dropdown__list">
-											<li> <a class="admin-a" href="#">Sửa</a> </li>
-											<li> <a class="admin-a" href="#">Ẩn</a> </li>
-											<li> <a class="admin-a" href="#">Xóa</a> </li>
-										</ul>
-									</li>
-								</ul>
+								<div class="action-buttons">
+									<a class="btn-action btn-edit" href="/admin/categories_admin/edit/<%= category.category_id %>" title="Sửa">
+										<span class="material-symbols-rounded">edit</span>
+									</a>
+									<a class="btn-action btn-hide" href="#" title="Ẩn">
+										<span class="material-symbols-rounded">visibility_off</span>
+									</a>
+									<a class="btn-action btn-delete" href="#" title="Xóa">
+										<span class="material-symbols-rounded">delete</span>
+									</a>
+								</div>
 							</td>
 						</tr>
 						<% }) %>
@@ -155,8 +156,9 @@
 	<!-- End Main -->
 
 	<!-- Scripts -->
-	<script src="/scripts/admin/cate_admin.js"></script>
-	<script src="/scripts/admin/index_admin.js"></script>
+	<script src="/scripts/Admin/cate_admin.js"></script>
+	<script src="/scripts/Admin/index_admin.js"></script>
+	<script src="/scripts/Admin/dropdown.js"></script>
 
 </body>
 

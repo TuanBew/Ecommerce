@@ -7,6 +7,7 @@ const product = require('../customer/product.model');
 
 const cateAdmin = function () { }
 
+// Get all categories with pagination and search
 cateAdmin.getCategories = async (searchKey, page, limit) => {
     let getRowSQL = "SELECT COUNT(*) as total FROM view_cate_admin"
     let getCateSQL = "SELECT * FROM view_cate_admin"
@@ -47,7 +48,63 @@ cateAdmin.getCategories = async (searchKey, page, limit) => {
     })
 }
 
+// Get category by ID
+cateAdmin.getCategoryById = async (categoryId) => {
+    try {
+        let getCategory = `SELECT * FROM categories WHERE category_id = ${categoryId}`;
+        let result = await query(getCategory);
+        
+        if (result.length > 0) {
+            return result[0];
+        } else {
+            return null;
+        }
+    } catch (error) {
+        console.error('Error fetching category by ID:', error);
+        return null;
+    }
+}
 
+// Add a new category
+cateAdmin.addCategory = async (categoryName, categoryImg) => {
+    try {
+        let categoryType = 'Điện máy'; // Default type
+        let insertCategory = `INSERT INTO categories (category_name, category_img, categorry_type) 
+                             VALUES (?, ?, ?)`;
+        let result = await query(insertCategory, [categoryName, categoryImg, categoryType]);
+        
+        return result.insertId > 0;
+    } catch (error) {
+        console.error('Error adding category:', error);
+        return false;
+    }
+}
+
+// Update an existing category
+cateAdmin.updateCategory = async (categoryId, categoryName, categoryImg) => {
+    try {
+        let updateQuery = '';
+        let params = [];
+        
+        // If image is provided, update both name and image
+        if (categoryImg) {
+            updateQuery = `UPDATE categories SET category_name = ?, category_img = ? WHERE category_id = ?`;
+            params = [categoryName, categoryImg, categoryId];
+        } else {
+            // Otherwise update only the name
+            updateQuery = `UPDATE categories SET category_name = ? WHERE category_id = ?`;
+            params = [categoryName, categoryId];
+        }
+        
+        let result = await query(updateQuery, params);
+        return result.affectedRows > 0;
+    } catch (error) {
+        console.error('Error updating category:', error);
+        return false;
+    }
+}
+
+// Get all products with pagination and search
 cateAdmin.getProducts = async (searchKey, page, limit) => {
     let getRowSQL = "SELECT COUNT(*) as total FROM view_products_admin"
     let getProductSQL = "SELECT * FROM view_products_admin"

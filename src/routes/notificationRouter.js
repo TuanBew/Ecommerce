@@ -2,7 +2,7 @@ const express = require('express')
 const router = express.Router()
 
 // import controller
-const notificationController = require('../controllers/customer/notificationController')
+const notificationController = require('../controllers/customer/notificationController.js')
 
 // import middleware
 const authMiddleware = require('../middleware/authMiddleware.js')

@@ -514,3 +514,62 @@ a.admin-a {
 	z-index: 100;
 	display: block;
 }
+
+/* For JavaScript toggling */
+.action__dropdown>li>ul.dropdown__list.show {
+	z-index: 100;
+	display: block;
+}
+
+/* Action Buttons */
+.action-buttons {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    gap: 5px;
+}
+
+.btn-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    color: #fff;
+    text-decoration: none;
+}
+
+.btn-action:hover {
+    transform: translateY(-2px);
+}
+
+.btn-edit {
+    background-color: var(--primary-color);
+}
+
+.btn-edit:hover {
+    background-color: var(--primary-color-2);
+}
+
+.btn-hide {
+    background-color: var(--yellow5);
+}
+
+.btn-hide:hover {
+    background-color: var(--yellow6);
+}
+
+.btn-delete {
+    background-color: var(--red4);
+}
+
+.btn-delete:hover {
+    background-color: var(--red5);
+}
+
+.btn-action span {
+    font-size: 18px;
+}
