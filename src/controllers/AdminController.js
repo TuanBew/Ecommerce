@@ -51,7 +51,7 @@ class AdminController {
         console.log('[ADMIN DASHBOARD] Error counting categories:', err.message);
       }
       
-      // Simple stats for dashboard - avoiding complex joins that don't match your DB schema
+      // Simple stats for dashboard
       const stats = {
         products: totalProducts,
         orders: totalOrders,
@@ -76,15 +76,15 @@ class AdminController {
   // LOGIN
   login = (req, res) => {
     // Check if user already logged in & redirect to dashboard
-    if (req.cookies.jwt) {
+    if (req.cookies.adminSave) {
       try {
-        const token = req.cookies.jwt
-        const decoded = jwt.verify(token, process.env.JWT_SECRET)
-        if (decoded.role_id === 1) {
-          return res.redirect('/admin')
+        const token = req.cookies.adminSave;
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        if (decoded.admin_id) {
+          return res.redirect('/admin');
         }
       } catch (error) {
-        console.log('Cookie has error but could not be properly parsed')
+        console.log('Cookie has error but could not be properly parsed');
       }
     }
     
@@ -92,7 +92,7 @@ class AdminController {
       title: {
         title: 'Đăng nhập quản trị viên'
       }
-    })
+    });
   }
 
   login_post = async (req, res) => {
@@ -181,24 +181,36 @@ class AdminController {
 
   // CATEGORIES
   categories = async (req, res) => {
-    const user = req.admin;
+    try {
+      const user = req.admin;
 
-    // Fetch categories from database
-    const categories = await query('SELECT * FROM categories ORDER BY category_id ASC');
-    
-    // Count products per category
-    for (let category of categories) {
-      const products = await query('SELECT COUNT(*) as count FROM products WHERE category_id = ?', [category.category_id]);
-      category.productCount = products[0].count;
+      // Fetch categories from database
+      const categories = await query('SELECT * FROM categories ORDER BY category_id ASC');
+      
+      // Count products per category
+      for (let category of categories) {
+        const products = await query('SELECT COUNT(*) as count FROM products WHERE category_id = ?', [category.category_id]);
+        category.productCount = products[0].count;
+      }
+
+      res.render('admin/pages/categories_admin', {
+        title: {
+          title: 'Quản lý danh mục sản phẩm'
+        },
+        user: user,
+        categories
+      });
+    } catch (error) {
+      console.error("[ADMIN] Error loading categories:", error);
+      res.status(500).render('admin/pages/error', {
+        title: {
+          title: 'Lỗi hệ thống'
+        },
+        user: req.admin,
+        message: 'Đã xảy ra lỗi khi tải danh mục sản phẩm',
+        errorDetails: process.env.NODE_ENV !== 'production' ? error.stack : null
+      });
     }
-
-    res.render('admin/pages/categories_admin', {
-      title: {
-        title: 'Quản lý danh mục sản phẩm'
-      },
-      user: user,
-      categories
-    });
   }
 
   category_add = (req, res) => {
@@ -213,23 +225,35 @@ class AdminController {
   }
 
   category_edit = async (req, res) => {
-    const user = req.admin;
-    const categoryId = req.params.id;
+    try {
+      const user = req.admin;
+      const categoryId = req.params.id;
 
-    // Fetch category from database
-    const category = await query('SELECT * FROM categories WHERE category_id = ?', [categoryId]);
-    
-    if (category.length === 0) {
-      return res.redirect('/admin/categories_admin');
+      // Fetch category from database
+      const category = await query('SELECT * FROM categories WHERE category_id = ?', [categoryId]);
+      
+      if (category.length === 0) {
+        return res.redirect('/admin/categories_admin');
+      }
+
+      res.render('admin/pages/cate_edit_admin', {
+        title: {
+          title: 'Sửa danh mục sản phẩm'
+        },
+        user: user,
+        category: category[0]
+      });
+    } catch (error) {
+      console.error("[ADMIN] Error loading category edit:", error);
+      res.status(500).render('admin/pages/error', {
+        title: {
+          title: 'Lỗi hệ thống'
+        },
+        user: req.admin,
+        message: 'Đã xảy ra lỗi khi tải thông tin danh mục',
+        errorDetails: process.env.NODE_ENV !== 'production' ? error.stack : null
+      });
     }
-
-    res.render('admin/pages/cate_edit_admin', {
-      title: {
-        title: 'Sửa danh mục sản phẩm'
-      },
-      user: user,
-      category: category[0]
-    });
   }
 
   // CATEGORY API
@@ -296,7 +320,7 @@ class AdminController {
         // Get the image path to delete later
         const categoryImage = category[0].category_img;
         
-        // MODIFIED: Instead of checking and preventing deletion, update products to category_id = 0
+        // Instead of checking and preventing deletion, update products to category_id = 0
         await query('UPDATE products SET category_id = 0 WHERE category_id = ?', [categoryId]);
         console.log(`Updated products with category_id ${categoryId} to have category_id = 0`);
         
@@ -438,17 +462,29 @@ class AdminController {
           formatFunction
       });
     } catch (error) {
-      console.error("Error loading products:", error);
-      res.status(500).send("An error occurred loading the products page");
+      console.error("[ADMIN] Error loading products:", error);
+      res.status(500).render('admin/pages/error', {
+        title: {
+          title: 'Lỗi hệ thống'
+        },
+        user: req.admin,
+        message: 'Đã xảy ra lỗi khi tải danh sách sản phẩm',
+        errorDetails: process.env.NODE_ENV !== 'production' ? error.stack : null
+      });
     }
   }
 
   // Add product page
   addProductPage = async (req, res) => {
     try {
-      // Get categories for dropdown
-      const categories = await query('SELECT * FROM categories ORDER BY category_name');
+      console.log("[ADMIN] Loading add product page...");
       
+      // Get categories for dropdown
+      console.log("[ADMIN] Fetching categories...");
+      const categories = await query('SELECT * FROM categories ORDER BY category_name');
+      console.log(`[ADMIN] Found ${categories.length} categories`);
+      
+      console.log("[ADMIN] Rendering product_add_admin template");
       res.render('admin/pages/product_add_admin', {
           title: {
               title: 'Thêm sản phẩm mới'
@@ -457,9 +493,18 @@ class AdminController {
           user: req.admin, // Add this to make the sidebar template work
           categories
       });
+      console.log("[ADMIN] Add product page rendered successfully");
     } catch (error) {
-      console.error("Error loading add product page:", error);
-      res.status(500).send("An error occurred loading the add product page");
+      console.error("[ADMIN] Error loading add product page:", error);
+      console.error("[ADMIN] Error stack:", error.stack);
+      res.status(500).render('admin/pages/error', {
+        title: {
+          title: 'Lỗi hệ thống'
+        },
+        user: req.admin,
+        message: 'Đã xảy ra lỗi khi tải trang thêm sản phẩm',
+        errorDetails: process.env.NODE_ENV !== 'production' ? error.stack : null
+      });
     }
   }
 
@@ -467,8 +512,10 @@ class AdminController {
   editProductPage = async (req, res) => {
     try {
       const productId = req.params.id;
+      console.log(`[ADMIN] Loading edit product page for product ID: ${productId}`);
       
       // Get product info
+      console.log("[ADMIN] Fetching product data...");
       const productQuery = `
           SELECT p.*, c.category_name
           FROM products p
@@ -477,19 +524,25 @@ class AdminController {
       `;
       
       const productResult = await query(productQuery, [productId]);
+      console.log(`[ADMIN] Product query completed, found ${productResult.length} results`);
       
       if (productResult.length === 0) {
+          console.log(`[ADMIN] Product not found with ID: ${productId}`);
           return res.status(404).render('admin/pages/error', {
-              title: 'Lỗi - Không tìm thấy sản phẩm',
+              title: {
+                title: 'Lỗi - Không tìm thấy sản phẩm'
+              },
               admin: req.admin,
-              user: req.admin, // Add this to make the sidebar template work
+              user: req.admin,
               message: 'Không tìm thấy sản phẩm với ID đã cung cấp.'
           });
       }
       
       const product = productResult[0];
+      console.log(`[ADMIN] Found product: ${product.product_name}`);
       
       // Get product variants
+      console.log("[ADMIN] Fetching product variants...");
       const variantsQuery = `
           SELECT * FROM product_variants
           WHERE product_id = ?
@@ -497,8 +550,10 @@ class AdminController {
       `;
       
       const variants = await query(variantsQuery, [productId]);
+      console.log(`[ADMIN] Found ${variants.length} variants for product`);
       
       // Get product images
+      console.log("[ADMIN] Fetching product images...");
       const imagesQuery = `
           SELECT * FROM product_imgs
           WHERE product_id = ?
@@ -506,8 +561,10 @@ class AdminController {
       `;
       
       const images = await query(imagesQuery, [productId]);
+      console.log(`[ADMIN] Found ${images.length} images for product`);
       
       // Get product details (specifications)
+      console.log("[ADMIN] Fetching product specifications...");
       const specsQuery = `
           SELECT * FROM product_details
           WHERE product_id = ?
@@ -515,30 +572,56 @@ class AdminController {
       `;
       
       const specs = await query(specsQuery, [productId]);
+      console.log(`[ADMIN] Found ${specs.length} specifications for product`);
       
       // Get all categories for dropdown
+      console.log("[ADMIN] Fetching categories for dropdown...");
       const categories = await query('SELECT * FROM categories ORDER BY category_name');
+      console.log(`[ADMIN] Found ${categories.length} categories`);
+      
+      console.log("[ADMIN] All data fetched, rendering product_edit_admin template");
+      console.log("[ADMIN] Rendering with data:", {
+          productId,
+          productName: product.product_name,
+          variantCount: variants.length,
+          imageCount: images.length,
+          specCount: specs.length,
+          categoryCount: categories.length
+      });
       
       res.render('admin/pages/product_edit_admin', {
           title: {
               title: 'Sửa thông tin sản phẩm'
           },
           admin: req.admin,
-          user: req.admin, // Add this to make the sidebar template work
+          user: req.admin,
           product,
           variants,
           images,
           specs,
           categories
       });
+      console.log("[ADMIN] Edit product page rendered successfully");
     } catch (error) {
-      console.error("Error loading edit product page:", error);
-      res.status(500).send("An error occurred loading the edit product page");
+      console.error("[ADMIN] Error loading edit product page:", error);
+      console.error("[ADMIN] Error stack:", error.stack);
+      res.status(500).render('admin/pages/error', {
+        title: {
+          title: 'Lỗi hệ thống'
+        },
+        user: req.admin,
+        message: 'Đã xảy ra lỗi khi tải trang sửa sản phẩm',
+        errorDetails: process.env.NODE_ENV !== 'production' ? error.stack : null
+      });
     }
   }
 
   // Add product API
   addProduct = async (req, res) => {
+    console.log("[ADMIN] Add product API called");
+    console.log("[ADMIN] Request body:", req.body);
+    console.log("[ADMIN] Files:", req.files ? Object.keys(req.files) : 'No files');
+    
     try {
       // Start transaction
       await query('START TRANSACTION');
@@ -655,6 +738,7 @@ class AdminController {
       await query('COMMIT');
       
       // Return success response
+      console.log("[ADMIN] Product added successfully with ID:", productId);
       res.status(201).json({
         status: 'success',
         message: 'Thêm sản phẩm thành công',
@@ -663,16 +747,20 @@ class AdminController {
     } catch (error) {
       // Rollback transaction on error
       await query('ROLLBACK');
-      console.error('Error adding product:', error);
+      console.error('[ADMIN] Error adding product:', error);
+      console.error('[ADMIN] Error stack:', error.stack);
       res.status(500).json({
         status: 'error',
         message: 'Đã có lỗi xảy ra khi thêm sản phẩm'
       });
     }
   }
-
+  
   // API to update a product
   updateProduct = async (req, res) => {
+    console.log("[ADMIN] Update product API called");
+    console.log("[ADMIN] Product ID:", req.body.product_id);
+    
     try {
         // Start transaction
         await query('START TRANSACTION');
@@ -725,7 +813,7 @@ class AdminController {
                 // Insert new variant
                 const result = await query(
                     'INSERT INTO product_variants (product_id, product_variant_name, product_variant_price, product_variant_available, product_variant_is_bestseller, product_variant_added_date, product_variant_is_display) VALUES (?, ?, ?, ?, ?, NOW(), 1)',
-                    [productId, variantName, variantPrice, variantStock, variantIsBestseller]
+                    [product_id, variantName, variantPrice, variantStock, variantIsBestseller]
                 );
                 variantIdsToKeep.push(result.insertId);
             }
@@ -785,7 +873,9 @@ class AdminController {
         }
         
         // Handle image deletions
-        const deleteImages = req.body.delete_images || [];
+        const deleteImages = req.body.delete_images ? 
+            (Array.isArray(req.body.delete_images) ? req.body.delete_images : [req.body.delete_images]) : [];
+        
         if (deleteImages.length > 0) {
             // Get filenames to delete files
             for (const imageId of deleteImages) {
@@ -805,37 +895,37 @@ class AdminController {
         }
         
         // Handle new image uploads
-        const newImageCount = req.body.new_image_count || 0;
-        
-        if (newImageCount > 0 && req.files) {
-            // Ensure product image directory exists
-            const productImageDir = path.join(__dirname, '../public/imgs/product_image/P' + product_id);
-            if (!fs.existsSync(productImageDir)) {
-                fs.mkdirSync(productImageDir, { recursive: true });
-            }
+        if (req.files) {
+            // Get all files that start with "new_image_"
+            const newImageKeys = Object.keys(req.files).filter(key => key.startsWith('new_image_'));
             
-            // Process each new image
-            for (let i = 0; i < newImageCount; i++) {
-                const imageField = `new_images_${i}`;
-                if (!req.files[imageField]) continue;
+            if (newImageKeys.length > 0) {
+                // Ensure product image directory exists
+                const productImageDir = path.join(__dirname, '../public/imgs/product_image/P' + product_id);
+                if (!fs.existsSync(productImageDir)) {
+                    fs.mkdirSync(productImageDir, { recursive: true });
+                }
                 
-                const image = req.files[imageField];
-                const extension = image.name.split('.').pop();
-                const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-                const fileName = `P${product_id}_${uniqueSuffix}.${extension}`;
-                
-                // Move file to product's directory
-                const uploadPath = path.join(productImageDir, fileName);
-                await image.mv(uploadPath);
-                
-                // Insert into database
-                await query('INSERT INTO product_imgs (product_id, image_name) VALUES (?, ?)', [product_id, fileName]);
+                // Process each new image
+                for (const key of newImageKeys) {
+                    const image = req.files[key];
+                    const extension = image.name.split('.').pop();
+                    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+                    const fileName = `P${product_id}_${uniqueSuffix}.${extension}`;
+                    
+                    // Move file to product's directory
+                    const uploadPath = path.join(productImageDir, fileName);
+                    await image.mv(uploadPath);
+                    
+                    // Insert into database
+                    await query('INSERT INTO product_imgs (product_id, image_name) VALUES (?, ?)', [product_id, fileName]);
+                }
             }
         }
         
         // Commit transaction
         await query('COMMIT');
-        
+        console.log("[ADMIN] Product updated successfully");
         res.status(200).json({
             status: 'success',
             message: 'Cập nhật sản phẩm thành công'
@@ -844,6 +934,7 @@ class AdminController {
         // Rollback transaction on error
         await query('ROLLBACK');
         console.error('Error updating product:', error);
+        console.error('[ADMIN] Error stack:', error.stack);
         res.status(500).json({
             status: 'error',
             message: 'Đã có lỗi xảy ra khi cập nhật sản phẩm'
@@ -1079,7 +1170,7 @@ class AdminController {
         JOIN users u ON o.user_id = u.user_id
         ORDER BY o.order_date DESC
       `);
-
+   
       res.render('admin/pages/orders_admin', {
         title: {
           title: 'Quản lý đơn hàng'
@@ -1089,7 +1180,14 @@ class AdminController {
       });
     } catch (error) {
       console.error("Error loading orders:", error);
-      res.status(500).send("An error occurred loading the orders page");
+      res.status(500).render('admin/pages/error', {
+        title: {
+          title: 'Lỗi hệ thống'
+        },
+        user: req.admin,
+        message: 'Đã xảy ra lỗi khi tải danh sách đơn hàng',
+        errorDetails: process.env.NODE_ENV !== 'production' ? error.stack : null
+      });
     }
   }
 
@@ -1133,7 +1231,14 @@ class AdminController {
       });
     } catch (error) {
       console.error("Error loading order details:", error);
-      res.status(500).send("An error occurred loading the order details page");
+      res.status(500).render('admin/pages/error', {
+        title: {
+          title: 'Lỗi hệ thống'
+        },
+        user: req.admin,
+        message: 'Đã xảy ra lỗi khi tải chi tiết đơn hàng',
+        errorDetails: process.env.NODE_ENV !== 'production' ? error.stack : null
+      });
     }
   }
 
@@ -1171,7 +1276,7 @@ class AdminController {
     try {
       const user = req.admin;
 
-      // Get all users without filtering by role_id (which doesn't exist in your schema)
+      // Get all users
       const users = await query(`
         SELECT *
         FROM users
@@ -1187,7 +1292,14 @@ class AdminController {
       });
     } catch (error) {
       console.error('[ADMIN] Error loading users:', error.message);
-      res.status(500).send("Error loading users page");
+      res.status(500).render('admin/pages/error', {
+        title: {
+          title: 'Lỗi hệ thống'
+        },
+        user: req.admin,
+        message: 'Đã xảy ra lỗi khi tải danh sách người dùng',
+        errorDetails: process.env.NODE_ENV !== 'production' ? error.stack : null
+      });
     }
   }
  

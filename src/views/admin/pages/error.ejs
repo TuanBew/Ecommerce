@@ -12,22 +12,43 @@
 </head>
 
 <body>
+    <%- include('../partials/header_admin.ejs') %>
+
     <div class="grid-container">
-        <%- include('../partials/sidebar_admin') %>
-        <%- include('../partials/header_admin', {title: {title: 'Lỗi'} }) %>
+        <%- include('../partials/sidebar_admin.ejs') %>
 
         <main class="main-container">
-            <div class="error-container">
-                <div class="error-icon">
-                    <span class="material-symbols-rounded">error</span>
+            <div class="card">
+                <div class="card-header">
+                    <h4>Lỗi</h4>
                 </div>
-                <h1><%= title %></h1>
-                <p><%= message %></p>
-                <a href="/admin" class="btn-primary">Quay lại trang chủ</a>
+                <div class="card-body">
+                    <div class="alert alert-danger">
+                        <p><%= message || 'Đã xảy ra lỗi không xác định' %></p>
+                    </div>
+                    <div class="mt-4">
+                        <a href="/admin" class="btn-admin btn-primary">
+                            <span class="material-symbols-rounded">home</span>
+                            <p>Quay lại trang chủ</p>
+                        </a>
+                    </div>
+                </div>
             </div>
+
+            <% if (process.env.NODE_ENV !== 'production' && errorDetails) { %>
+                <div class="card mt-4">
+                    <div class="card-header">
+                        <h4>Thông tin gỡ lỗi</h4>
+                    </div>
+                    <div class="card-body">
+                        <pre class="error-details"><%= errorDetails %></pre>
+                    </div>
+                </div>
+            <% } %>
         </main>
     </div>
 
+    <%- include('../partials/footer_admin.ejs') %>
     <script src="/scripts/admin/index_admin.js"></script>
 </body>
 </html>

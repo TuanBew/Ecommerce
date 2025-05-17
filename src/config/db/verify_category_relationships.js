@@ -22,8 +22,7 @@ async function verifyAndFixRelationships() {
             console.warn(`Found ${orphanedProducts.length} products with invalid category references.`);
             console.log('Product IDs with issues:', orphanedProducts.map(p => p.product_id));
             
-            // Prompt for auto-fix (in a real scenario, you'd add user interaction here)
-            // For now, we'll assign these products to the first category (just as an example)
+            // Fix orphaned products
             if (categories.length > 0) {
                 const defaultCategory = categories[0].category_id;
                 console.log(`Assigning orphaned products to category ID: ${defaultCategory}`);
@@ -42,30 +41,35 @@ async function verifyAndFixRelationships() {
             console.log('✅ All products have valid category references.');
         }
         
-        // Check for any subcategories if applicable
-        try {
-            const subcategories = await query('SELECT * FROM subcategories');
-            if (subcategories.length > 0) {
-                const orphanedSubcategories = subcategories.filter(sub => !categoryIds.includes(sub.category_id));
-                
-                if (orphanedSubcategories.length > 0) {
-                    console.warn(`Found ${orphanedSubcategories.length} subcategories with invalid category references.`);
-                    // Add your fix logic here if needed
-                } else {
-                    console.log('✅ All subcategories have valid category references.');
-                }
+        // Ensure all categories have a proper type value
+        const categoriesWithoutType = categories.filter(cat => !cat.categorry_type);
+        if (categoriesWithoutType.length > 0) {
+            console.warn(`Found ${categoriesWithoutType.length} categories without a type.`);
+            
+            // Set a default type
+            for (const category of categoriesWithoutType) {
+                await query('UPDATE categories SET categorry_type = ? WHERE category_id = ?', 
+                    ['Khác', category.category_id]);
+                console.log(`Fixed category ID ${category.category_id} with default type 'Khác'`);
             }
-        } catch (e) {
-            // Subcategories table might not exist, which is fine
-            console.log('No subcategories table found. Skipping check.');
+            
+            console.log('All categories now have a type value.');
+        } else {
+            console.log('✅ All categories have a type value.');
         }
         
         console.log('Verification complete.');
-        process.exit(0);
+        
     } catch (error) {
         console.error('Error during verification:', error);
-        process.exit(1);
     }
 }
 
-verifyAndFixRelationships();
+// Run the verification and fix function
+verifyAndFixRelationships().then(() => {
+    console.log('Finished verification process.');
+    process.exit(0);
+}).catch(err => {
+    console.error('Verification process failed:', err);
+    process.exit(1);
+});
