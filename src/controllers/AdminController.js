@@ -226,16 +226,25 @@ class AdminController {
 
   category_edit = async (req, res) => {
     try {
+      console.log("[ADMIN] Accessing category_edit with params:", req.params);
       const user = req.admin;
       const categoryId = req.params.id;
+
+      if (!categoryId) {
+        console.error("[ADMIN] Missing category ID in request");
+        return res.redirect('/admin/categories_admin');
+      }
 
       // Fetch category from database
       const category = await query('SELECT * FROM categories WHERE category_id = ?', [categoryId]);
       
       if (category.length === 0) {
+        console.error("[ADMIN] Category not found with ID:", categoryId);
         return res.redirect('/admin/categories_admin');
       }
 
+      console.log("[ADMIN] Successfully retrieved category:", category[0].category_name);
+      
       res.render('admin/pages/cate_edit_admin', {
         title: {
           title: 'Sửa danh mục sản phẩm'
@@ -758,19 +767,61 @@ class AdminController {
   
   // API to update a product
   updateProduct = async (req, res) => {
-    console.log("[ADMIN] Update product API called");
-    console.log("[ADMIN] Product ID:", req.body.product_id);
+    console.log("\n--------------------------------------------------");
+    console.log("[ADMIN] Update product API called at:", new Date().toISOString());
+    console.log("[ADMIN] Request URL:", req.originalUrl);
+    console.log("[ADMIN] Product ID from params:", req.params.id);
+    console.log("[ADMIN] Product ID from body:", req.body.product_id);
+    console.log("[ADMIN] Request method:", req.method);
+    console.log("[ADMIN] Request headers:", {
+      'content-type': req.headers['content-type'],
+      'content-length': req.headers['content-length'],
+    });
+    console.log("[ADMIN] Files received:", req.files ? Object.keys(req.files).length + " files" : 'No files');
+    if (req.files) {
+      Object.keys(req.files).forEach(key => {
+        console.log(`[ADMIN] - File ${key}:`, {
+          name: req.files[key].name,
+          size: Math.round(req.files[key].size / 1024) + "KB",
+          mimetype: req.files[key].mimetype
+        });
+      });
+    }
     
     try {
         // Start transaction
         await query('START TRANSACTION');
+        console.log("[ADMIN] Transaction started");
         
-        const { product_id, product_name, category_id, product_description } = req.body;
-        const product_is_bestseller = req.body.product_is_bestseller ? 1 : 0;
+        const product_id = req.params.id || req.body.product_id;
+        
+        if (!product_id) {
+            console.error("[ADMIN] Missing product ID in both params and body");
+            await query('ROLLBACK');
+            return res.status(400).json({
+                status: 'error',
+                message: 'Missing product ID'
+            });
+        }
+        
+        console.log("[ADMIN] Using product ID:", product_id);
+        
+        const { product_name, category_id, product_description } = req.body;
         const product_is_display = req.body.product_is_display ? 1 : 0;
+        
+        // Debug info
+        console.log("[ADMIN] Form data:", {
+            product_id,
+            product_name,
+            category_id,
+            product_description: product_description ? product_description.substring(0, 20) + '...' : 'Empty',
+            display: req.body.product_is_display ? 'Yes' : 'No',
+            delete_images: req.body.delete_images || 'None'
+        });
         
         // Validate
         if (!product_id || !product_name || !category_id) {
+            console.error("[ADMIN] Missing required fields");
             await query('ROLLBACK');
             return res.status(400).json({
                 status: 'error',
@@ -778,87 +829,101 @@ class AdminController {
             });
         }
         
-        // Update product info
-        await query(
-            'UPDATE products SET product_name = ?, category_id = ?, product_description = ?, product_is_bestseller = ?, product_is_display = ? WHERE product_id = ?',
-            [product_name, category_id, product_description, product_is_bestseller, product_is_display, product_id]
-        );
-        
-        // Process variants
-        // First get all existing variants
-        const existingVariants = await query('SELECT product_variant_id FROM product_variants WHERE product_id = ?', [product_id]);
-        const existingVariantIds = existingVariants.map(v => v.product_variant_id);
-        
-        // Track which variants to keep
-        const variantIdsToKeep = [];
-        
-        // Process variants from the form
-        for (let i = 0; i < 100; i++) { // Arbitrary limit
-            const variantName = req.body[`variants[${i}][name]`];
-            const variantPrice = req.body[`variants[${i}][price]`];
-            const variantStock = req.body[`variants[${i}][stock]`];
-            const variantId = req.body[`variants[${i}][id]`];
-            const variantIsBestseller = req.body[`variants[${i}][is_bestseller]`] ? 1 : 0;
-            
-            if (!variantName || !variantPrice) continue;
-            
-            if (variantId) {
-                // Update existing variant
-                await query(
-                    'UPDATE product_variants SET product_variant_name = ?, product_variant_price = ?, product_variant_available = ?, product_variant_is_bestseller = ? WHERE product_variant_id = ? AND product_id = ?',
-                    [variantName, variantPrice, variantStock, variantIsBestseller, variantId, product_id]
-                );
-                variantIdsToKeep.push(Number(variantId));
-            } else {
-                // Insert new variant
-                const result = await query(
-                    'INSERT INTO product_variants (product_id, product_variant_name, product_variant_price, product_variant_available, product_variant_is_bestseller, product_variant_added_date, product_variant_is_display) VALUES (?, ?, ?, ?, ?, NOW(), 1)',
-                    [product_id, variantName, variantPrice, variantStock, variantIsBestseller]
-                );
-                variantIdsToKeep.push(result.insertId);
-            }
+        // Check if product exists
+        const productCheck = await query('SELECT * FROM products WHERE product_id = ?', [product_id]);
+        if (productCheck.length === 0) {
+            console.error(`[ADMIN] Product with ID ${product_id} not found`);
+            await query('ROLLBACK');
+            return res.status(404).json({
+                status: 'error',
+                message: 'Sản phẩm không tồn tại'
+            });
         }
         
-        // Delete variants that weren't in the form
-        const variantIdsToDelete = existingVariantIds.filter(id => !variantIdsToKeep.includes(id));
+        console.log(`[ADMIN] Found product: ${productCheck[0].product_name}`);
         
-        if (variantIdsToDelete.length > 0) {
+        // Check if product_is_bestseller column exists
+        const columnsResult = await query(`
+            SELECT COLUMN_NAME 
+            FROM INFORMATION_SCHEMA.COLUMNS 
+            WHERE TABLE_SCHEMA = DATABASE() 
+            AND TABLE_NAME = 'products' 
+            AND COLUMN_NAME = 'product_is_bestseller'
+        `);
+        
+        // Update product info based on column existence
+        if (columnsResult.length > 0) {
+            // Column exists, include it in the update
+            const product_is_bestseller = req.body.product_is_bestseller ? 1 : 0;
+            console.log("[ADMIN] Updating product with bestseller flag");
             await query(
-                'DELETE FROM product_variants WHERE product_variant_id IN (?) AND product_id = ?',
-                [variantIdsToDelete, product_id]
+                'UPDATE products SET product_name = ?, category_id = ?, product_description = ?, product_is_bestseller = ?, product_is_display = ? WHERE product_id = ?',
+                [product_name, category_id, product_description, product_is_bestseller, product_is_display, product_id]
+            );
+        } else {
+            // Column doesn't exist, exclude it from the update
+            console.log("[ADMIN] Updating product without bestseller flag");
+            await query(
+                'UPDATE products SET product_name = ?, category_id = ?, product_description = ?, product_is_display = ? WHERE product_id = ?',
+                [product_name, category_id, product_description, product_is_display, product_id]
             );
         }
         
+        console.log("[ADMIN] Basic product info updated");
+        
         // Process specifications
-        // First get all existing specs
+        console.log("[ADMIN] Processing specifications...");
+        
+        // Get all form fields to extract specs
+        const formKeys = Object.keys(req.body);
+        const specKeys = formKeys.filter(key => key.startsWith('specs[') && key.includes('][name]'));
+        
+        // Extract specs data
+        const specs = [];
+        for (const key of specKeys) {
+            const index = key.match(/specs\[(\d+)\]/)[1];
+            const nameKey = `specs[${index}][name]`;
+            const valueKey = `specs[${index}][value]`;
+            const idKey = `specs[${index}][id]`;
+            
+            const name = req.body[nameKey];
+            const value = req.body[valueKey];
+            const id = req.body[idKey];
+            
+            if (name && value) {
+                specs.push({ id, name, value, index });
+            }
+        }
+        
+        console.log(`[ADMIN] Found ${specs.length} specifications in form`);
+        
+        // Get existing specs from database
         const existingSpecs = await query('SELECT product_detail_id FROM product_details WHERE product_id = ?', [product_id]);
-        const existingSpecIds = existingSpecs.map(s => s.product_detail_id);
+        const existingSpecIds = existingSpecs.map(s => s.product_detail_id.toString());
+        
+        console.log(`[ADMIN] Found ${existingSpecIds.length} existing specifications in database`);
         
         // Track which specs to keep
         const specIdsToKeep = [];
         
-        // Process specs from the form
-        for (let i = 0; i < 100; i++) { // Arbitrary limit
-            const specName = req.body[`specs[${i}][name]`];
-            const specValue = req.body[`specs[${i}][value]`];
-            const specId = req.body[`specs[${i}][id]`];
-            
-            if (!specName || !specValue) continue;
-            
-            if (specId) {
+        // Process each spec
+        for (const spec of specs) {
+            if (spec.id && existingSpecIds.includes(spec.id.toString())) {
                 // Update existing spec
+                console.log(`[ADMIN] Updating specification ID ${spec.id}: ${spec.name} = ${spec.value}`);
                 await query(
                     'UPDATE product_details SET product_detail_name = ?, product_detail_value = ? WHERE product_detail_id = ? AND product_id = ?',
-                    [specName, specValue, specId, product_id]
+                    [spec.name, spec.value, spec.id, product_id]
                 );
-                specIdsToKeep.push(Number(specId));
+                specIdsToKeep.push(spec.id.toString());
             } else {
                 // Insert new spec
+                console.log(`[ADMIN] Adding new specification: ${spec.name} = ${spec.value}`);
                 const result = await query(
                     'INSERT INTO product_details (product_id, product_detail_name, product_detail_value) VALUES (?, ?, ?)',
-                    [product_id, specName, specValue]
+                    [product_id, spec.name, spec.value]
                 );
-                specIdsToKeep.push(result.insertId);
+                specIdsToKeep.push(result.insertId.toString());
             }
         }
         
@@ -866,6 +931,7 @@ class AdminController {
         const specIdsToDelete = existingSpecIds.filter(id => !specIdsToKeep.includes(id));
         
         if (specIdsToDelete.length > 0) {
+            console.log(`[ADMIN] Deleting specifications with IDs: ${specIdsToDelete.join(', ')}`);
             await query(
                 'DELETE FROM product_details WHERE product_detail_id IN (?) AND product_id = ?',
                 [specIdsToDelete, product_id]
@@ -873,59 +939,128 @@ class AdminController {
         }
         
         // Handle image deletions
+        console.log("[ADMIN] Processing image deletions...");
         const deleteImages = req.body.delete_images ? 
             (Array.isArray(req.body.delete_images) ? req.body.delete_images : [req.body.delete_images]) : [];
+        
+        console.log("[ADMIN] Images to delete:", deleteImages);
         
         if (deleteImages.length > 0) {
             // Get filenames to delete files
             for (const imageId of deleteImages) {
+                console.log(`[ADMIN] Deleting image ID: ${imageId}`);
+                
                 const image = await query('SELECT image_name FROM product_imgs WHERE image_id = ? AND product_id = ?', [imageId, product_id]);
                 
                 if (image.length > 0) {
+                    const imageName = image[0].image_name;
+                    console.log(`[ADMIN] Found image with name: ${imageName}`);
+                    
                     // Delete file from server
-                    const imagePath = path.join(__dirname, '../public/imgs/product_image/P' + product_id, image[0].image_name);
+                    const imagePath = path.join(__dirname, '../public/imgs/product_image/P' + product_id, imageName);
+                    console.log(`[ADMIN] Deleting file at path: ${imagePath}`);
+                    
                     if (fs.existsSync(imagePath)) {
                         fs.unlinkSync(imagePath);
+                        console.log(`[ADMIN] File deleted successfully`);
+                    } else {
+                        console.log(`[ADMIN] File not found at path: ${imagePath}`);
                     }
                     
                     // Delete from database
                     await query('DELETE FROM product_imgs WHERE image_id = ?', [imageId]);
+                    console.log(`[ADMIN] Image deleted from database`);
+                } else {
+                    console.log(`[ADMIN] Image with ID ${imageId} not found in database`);
                 }
             }
         }
         
         // Handle new image uploads
+        console.log("[ADMIN] Processing new image uploads...");
         if (req.files) {
+            console.log("[ADMIN] Files received:", Object.keys(req.files));
+            
             // Get all files that start with "new_image_"
             const newImageKeys = Object.keys(req.files).filter(key => key.startsWith('new_image_'));
+            
+            console.log("[ADMIN] New image keys:", newImageKeys);
             
             if (newImageKeys.length > 0) {
                 // Ensure product image directory exists
                 const productImageDir = path.join(__dirname, '../public/imgs/product_image/P' + product_id);
+                console.log(`[ADMIN] Product image directory: ${productImageDir}`);
+                
                 if (!fs.existsSync(productImageDir)) {
+                    console.log(`[ADMIN] Creating directory: ${productImageDir}`);
                     fs.mkdirSync(productImageDir, { recursive: true });
                 }
+
+                // Get the current highest image number for this product
+                let currentCount = 0;
+                try {
+                    const existingImages = await query('SELECT image_name FROM product_imgs WHERE product_id = ?', [product_id]);
+                    if (existingImages.length > 0) {
+                        // Extract numbers from filenames like P1_1.jpg, P1_2.jpg, etc.
+                        const pattern = new RegExp(`P${product_id}_(\\d+)\\.`);
+                        const numbers = existingImages
+                            .map(img => {
+                                const match = img.image_name.match(pattern);
+                                return match ? parseInt(match[1]) : 0;
+                            })
+                            .filter(num => !isNaN(num));
+                        
+                        if (numbers.length > 0) {
+                            currentCount = Math.max(...numbers);
+                        }
+                    }
+                    console.log(`[ADMIN] Current highest image number: ${currentCount}`);
+                } catch (err) {
+                    console.error(`[ADMIN] Error getting current image count: ${err.message}`);
+                }
                 
-                // Process each new image
+                // Process each new image with proper naming
                 for (const key of newImageKeys) {
                     const image = req.files[key];
-                    const extension = image.name.split('.').pop();
-                    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-                    const fileName = `P${product_id}_${uniqueSuffix}.${extension}`;
+                    console.log(`[ADMIN] Processing image: ${key}, original name: ${image.name}`);
+                    
+                    if (!image.name) {
+                        console.log(`[ADMIN] Skipping ${key} because it has no name`);
+                        continue;
+                    }
+                    
+                    const extension = image.name.split('.').pop().toLowerCase();
+                    currentCount++; // Increment the counter for each new image
+                    
+                    // Use proper naming convention: P{product_id}_{sequence_number}.{extension}
+                    const fileName = `P${product_id}_${currentCount}.${extension}`;
                     
                     // Move file to product's directory
                     const uploadPath = path.join(productImageDir, fileName);
-                    await image.mv(uploadPath);
+                    console.log(`[ADMIN] Moving file to: ${uploadPath}`);
                     
-                    // Insert into database
-                    await query('INSERT INTO product_imgs (product_id, image_name) VALUES (?, ?)', [product_id, fileName]);
+                    try {
+                        await image.mv(uploadPath);
+                        console.log('[ADMIN] File moved successfully');
+                        
+                        // Insert into database
+                        const imageInsertResult = await query(
+                            'INSERT INTO product_imgs (product_id, image_name) VALUES (?, ?)', 
+                            [product_id, fileName]
+                        );
+                        console.log(`[ADMIN] Image entry created in database with ID: ${imageInsertResult.insertId}`);
+                    } catch (err) {
+                        console.error(`[ADMIN] Error uploading image: ${err.message}`);
+                        console.error(err.stack);
+                        // Continue with other images even if one fails
+                    }
                 }
             }
         }
         
         // Commit transaction
         await query('COMMIT');
-        console.log("[ADMIN] Product updated successfully");
+        console.log("[ADMIN] Transaction committed - Product update successful");
         res.status(200).json({
             status: 'success',
             message: 'Cập nhật sản phẩm thành công'
@@ -933,13 +1068,14 @@ class AdminController {
     } catch (error) {
         // Rollback transaction on error
         await query('ROLLBACK');
-        console.error('Error updating product:', error);
+        console.error('[ADMIN] Error updating product:', error);
         console.error('[ADMIN] Error stack:', error.stack);
         res.status(500).json({
             status: 'error',
-            message: 'Đã có lỗi xảy ra khi cập nhật sản phẩm'
+            message: 'Đã có lỗi xảy ra khi cập nhật sản phẩm: ' + error.message
         });
     }
+    console.log("--------------------------------------------------\n");
   }
 
   // Delete product
