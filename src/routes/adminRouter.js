@@ -5,23 +5,30 @@ const path = require('path');
 const adminController = require('../controllers/AdminController');
 const adminMiddleware = require('../middleware/adminMiddleware');
 
-// Public routes - no auth required
-router.get('/login', adminMiddleware.checkAuth, adminController.login);
+// Admin routes
+router.get('/login', adminController.login);
 router.post('/login', adminController.login_post);
-router.get('/logout', (req, res) => {
-    res.clearCookie('adminSave');
-    res.redirect('/admin/login');
-});
+router.get('/logout', adminMiddleware.isAdmin, adminController.logout);
 
-// Protected routes - require admin authentication
+// Dashboard routes
 router.get('/', adminMiddleware.isAdmin, adminController.index);
-router.get('/dashboard', adminMiddleware.isAdmin, adminController.index);
 
-// Categories Manager
+// Category management
 router.get('/categories_admin', adminMiddleware.isAdmin, adminController.categories);
-router.get('/category_add_admin', adminMiddleware.isAdmin, adminController.category_add);
-router.get('/category_edit_admin/:id', adminMiddleware.isAdmin, adminController.category_edit);
-router.get('/category-update-tool', adminMiddleware.isAdmin, adminController.category_update_tool);
+router.get('/categories_admin/add', adminMiddleware.isAdmin, adminController.category_add);
+router.get('/categories_admin/edit/:id', adminMiddleware.isAdmin, adminController.category_edit);
+
+// Product management
+router.get('/products_admin', adminMiddleware.isAdmin, adminController.getProducts);
+router.get('/products_admin/add', adminMiddleware.isAdmin, adminController.addProductPage);
+router.get('/products_admin/edit/:id', adminMiddleware.isAdmin, adminController.editProductPage);
+
+// Order management
+router.get('/orders_admin', adminMiddleware.isAdmin, adminController.orders);
+router.get('/orders_admin/:id', adminMiddleware.isAdmin, adminController.order_details);
+
+// User management
+router.get('/users_admin', adminMiddleware.isAdmin, adminController.users);
 
 // Category API endpoints
 router.post('/api/update-category', adminMiddleware.isAdmin, adminController.updateCategory);
@@ -30,54 +37,14 @@ router.get('/api/categories', adminMiddleware.isAdmin, adminController.getCatego
 router.delete('/api/delete-category/:id', adminMiddleware.isAdmin, adminController.deleteCategory);
 router.post('/api/add-category', adminMiddleware.isAdmin, adminController.addCategory);
 
-// Products Manager
-router.get('/products_admin', adminMiddleware.isAdmin, adminController.products);
-router.get('/product_add_admin', adminMiddleware.isAdmin, adminController.product_add);
-router.get('/product_edit_admin/:id', adminMiddleware.isAdmin, adminController.product_edit);
-
-// Product Update API
+// Product API endpoints
+router.post('/api/add-product', adminMiddleware.isAdmin, adminController.addProduct);
 router.post('/api/update-product', adminMiddleware.isAdmin, adminController.updateProduct);
 router.delete('/api/delete-product/:id', adminMiddleware.isAdmin, adminController.deleteProduct);
-router.post('/api/add-product', adminMiddleware.isAdmin, adminController.addProduct);
+router.post('/api/bulk-delete-products', adminMiddleware.isAdmin, adminController.bulkDeleteProducts);
+router.post('/api/update-products-visibility', adminMiddleware.isAdmin, adminController.updateProductsVisibility);
 
-// Orders Manager
-router.get('/orders_admin', adminMiddleware.isAdmin, adminController.orders);
-router.get('/order_details_admin/:id', adminMiddleware.isAdmin, adminController.order_details);
-
-// Order Update API
+// Order API endpoints
 router.post('/api/update-order-status', adminMiddleware.isAdmin, adminController.updateOrderStatus);
-
-// Users Manager
-router.get('/users_admin', adminMiddleware.isAdmin, adminController.users);
-
-// Admin dashboard
-router.get('/', adminMiddleware.isAdmin, (req, res) => {
-    res.render('admin/dashboard', { title: 'Admin Dashboard' });
-});
-
-// Products management
-router.get('/products', adminMiddleware.isAdmin, (req, res) => {
-    res.render('admin/products', { title: 'Manage Products' });
-});
-
-// Add product form
-router.get('/products/add', adminMiddleware.isAdmin, (req, res) => {
-    res.render('admin/product-form', { title: 'Add Product' });
-});
-
-// User management
-router.get('/users', adminMiddleware.isAdmin, (req, res) => {
-    res.render('admin/users', { title: 'Manage Users' });
-});
-
-// Order management
-router.get('/orders', adminMiddleware.isAdmin, (req, res) => {
-    res.render('admin/orders', { title: 'Manage Orders' });
-});
-
-// Reports
-router.get('/reports', adminMiddleware.isAdmin, (req, res) => {
-    res.render('admin/reports', { title: 'Reports' });
-});
 
 module.exports = router;

@@ -1,0 +1,51 @@
+@import url('/styles/admin/index_admin.css');
+
+.error-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 50px;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    max-width: 600px;
+    margin: 50px auto;
+}
+
+.error-icon {
+    font-size: 80px;
+    color: #dc3545;
+    margin-bottom: 20px;
+}
+
+.error-icon .material-symbols-rounded {
+    font-size: 80px;
+}
+
+.error-container h1 {
+    margin-bottom: 20px;
+    color: #333;
+}
+
+.error-container p {
+    margin-bottom: 30px;
+    color: #666;
+    font-size: 18px;
+}
+
+.btn-primary {
+    display: inline-block;
+    padding: 10px 20px;
+    background-color: #2a7ee4;
+    color: white;
+    border-radius: 4px;
+    text-decoration: none;
+    font-weight: 500;
+    transition: background-color 0.3s;
+}
+
+.btn-primary:hover {
+    background-color: #1c6ad4;
+}

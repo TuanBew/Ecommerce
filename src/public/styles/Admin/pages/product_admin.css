@@ -1,0 +1,82 @@
+/* Product specific styles */
+.product-name-cell {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.product-name-cell img {
+    width: 50px;
+    height: 50px;
+    border-radius: 4px;
+    object-fit: cover;
+}
+
+.status.hidden p {
+    color: #999;
+    font-style: italic;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 5px;
+}
+
+.btn-edit, .btn-delete {
+    padding: 5px;
+    border-radius: 4px;
+    cursor: pointer;
+    border: none;
+    background: none;
+}
+
+.btn-edit {
+    color: #2a7ee4;
+}
+
+.btn-delete {
+    color: #dc3545;
+}
+
+.btn-edit:hover, .btn-delete:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* Modal styles */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-container {
+    background-color: white;
+    padding: 20px;
+    border-radius: 8px;
+    width: 400px;
+    max-width: 90%;
+}
+
+.modal-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.btn-danger {
+    background-color: #dc3545;
+    color: white;
+}
+
+.btn-secondary {
+    background-color: #6c757d;
+    color: white;
+}

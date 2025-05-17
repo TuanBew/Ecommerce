@@ -171,17 +171,17 @@ class AdminController {
             message: 'Đã xảy ra lỗi khi đăng nhập'
         });
     }
-};
+  }
 
   // LOGOUT
   logout = (req, res) => {
-    res.clearCookie('jwt')
-    res.redirect('/admin/login')
+    res.clearCookie('adminSave');
+    res.redirect('/admin/login');
   }
 
   // CATEGORIES
   categories = async (req, res) => {
-    const user = req.user;
+    const user = req.admin;
 
     // Fetch categories from database
     const categories = await query('SELECT * FROM categories ORDER BY category_id ASC');
@@ -202,7 +202,7 @@ class AdminController {
   }
 
   category_add = (req, res) => {
-    const user = req.user;
+    const user = req.admin;
     
     res.render('admin/pages/cate_add_admin', {
       title: {
@@ -213,7 +213,7 @@ class AdminController {
   }
 
   category_edit = async (req, res) => {
-    const user = req.user;
+    const user = req.admin;
     const categoryId = req.params.id;
 
     // Fetch category from database
@@ -372,271 +372,297 @@ class AdminController {
   }
 
   // PRODUCTS
-  products = async (req, res) => {
-    const user = req.user;
-
-    // Fetch products with category info
-    const products = await query(`
-      SELECT p.*, c.category_name 
-      FROM products p
-      LEFT JOIN categories c ON p.category_id = c.category_id
-      ORDER BY p.product_id DESC
-    `);
-
-    res.render('admin/pages/products_admin', {
-      title: {
-        title: 'Quản lý sản phẩm'
-      },
-      user: user,
-      products
-    });
-  }
-
-  product_add = async (req, res) => {
-    const user = req.user;
-
-    // Fetch categories for product form
-    const categories = await query('SELECT * FROM categories ORDER BY category_name ASC');
-    
-    res.render('admin/pages/product_add_admin', {
-      title: {
-        title: 'Thêm sản phẩm'
-      },
-      user: user,
-      categories
-    });
-  }
-
-  product_edit = async (req, res) => {
-    const user = req.user;
-    const productId = req.params.id;
-
-    // Fetch product from database
-    const product = await query('SELECT * FROM products WHERE product_id = ?', [productId]);
-    
-    if (product.length === 0) {
-      return res.redirect('/admin/products_admin');
-    }
-
-    // Fetch categories for product form
-    const categories = await query('SELECT * FROM categories ORDER BY category_name ASC');
-
-    // Fetch product images
-    const images = await query('SELECT * FROM product_images WHERE product_id = ?', [productId]);
-
-    res.render('admin/pages/product_edit_admin', {
-      title: {
-        title: 'Sửa sản phẩm'
-      },
-      user: user,
-      product: product[0],
-      categories,
-      images
-    });
-  }
-
-  // PRODUCT API
-  updateProduct = async (req, res) => {
+  getProducts = async (req, res) => {
     try {
-      const { 
-        productId, 
-        productName, 
-        productDesc, 
-        productPrice, 
-        productSalePrice, 
-        productQuantity, 
-        category,
-        deleteImages
-      } = req.body;
+      const searchKey = req.query.searchKey || '';
+      const page = parseInt(req.query.page) || 1;
+      const limit = 10;
+      const offset = (page - 1) * limit;
       
-      // Validate
-      if (!productId || !productName || !productPrice || !productQuantity || !category) {
-        return res.status(400).json({
-          status: 'fail',
-          message: 'Vui lòng nhập đầy đủ thông tin cần thiết'
-        });
-      }
-
-      // Update product in database
-      await query(`
-        UPDATE products 
-        SET 
-          product_name = ?, 
-          product_desc = ?, 
-          product_price = ?, 
-          product_sale_price = ?, 
-          product_quantity = ?,
-          category_id = ?
-        WHERE product_id = ?
-      `, [
-        productName, 
-        productDesc, 
-        productPrice, 
-        productSalePrice || null, 
-        productQuantity,
-        category,
-        productId
-      ]);
-
-      // Handle image deletion if specified
-      if (deleteImages) {
-        const imagesToDelete = Array.isArray(deleteImages) ? deleteImages : [deleteImages];
-        for (const imageId of imagesToDelete) {
-          // Get image filename before delete
-          const image = await query('SELECT * FROM product_images WHERE image_id = ?', [imageId]);
-          
-          if (image.length > 0) {
-            // Delete file from server
-            const imagePath = path.join(__dirname, '../public/imgs/products/', image[0].image_name);
-            if (fs.existsSync(imagePath)) {
-              fs.unlinkSync(imagePath);
-            }
-            
-            // Delete from database
-            await query('DELETE FROM product_images WHERE image_id = ?', [imageId]);
+      // Count total products that match the search
+      let countQuery = `
+          SELECT COUNT(*) as total 
+          FROM products p
+          LEFT JOIN categories c ON p.category_id = c.category_id
+          WHERE p.product_name LIKE ? OR c.category_name LIKE ?
+      `;
+      
+      const countValues = [`%${searchKey}%`, `%${searchKey}%`];
+      const totalResult = await query(countQuery, countValues);
+      const totalRow = totalResult[0].total;
+      
+      // Get products with pagination and search
+      let productsQuery = `
+          SELECT p.*, 
+              c.category_name,
+              COUNT(pv.product_variant_id) as product_count,
+              COALESCE(SUM(od.order_detail_price_after * od.order_detail_quantity), 0) as revenue,
+              (SELECT image_name FROM product_imgs pi WHERE pi.product_id = p.product_id ORDER BY pi.image_id ASC LIMIT 1) as product_avt_img
+          FROM products p
+          LEFT JOIN categories c ON p.category_id = c.category_id
+          LEFT JOIN product_variants pv ON p.product_id = pv.product_id
+          LEFT JOIN order_details od ON pv.product_variant_id = od.product_variant_id
+          WHERE p.product_name LIKE ? OR c.category_name LIKE ?
+          GROUP BY p.product_id
+          ORDER BY p.product_id DESC
+          LIMIT ?, ?
+      `;
+      
+      const productValues = [`%${searchKey}%`, `%${searchKey}%`, offset, limit];
+      const products = await query(productsQuery, productValues);
+      
+      // Calculate total pages
+      const totalPage = Math.ceil(totalRow / limit);
+      
+      // Return formatted data
+      const formatFunction = {
+          toCurrency: function(money) {
+              return money.toLocaleString('vi-VN') + 'đ';
           }
-        }
-      }
-
-      // Handle new image uploads
-      if (req.files && req.files.images) {
-        const imagesToUpload = Array.isArray(req.files.images) ? req.files.images : [req.files.images];
-        
-        for (const image of imagesToUpload) {
-          // Generate unique filename
-          const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-          const filename = `product_${productId}_${uniqueSuffix}.${image.name.split('.').pop()}`;
-          
-          // Move the file
-          const uploadPath = path.join(__dirname, '../public/imgs/products/', filename);
-          await image.mv(uploadPath);
-          
-          // Save to database
-          await query('INSERT INTO product_images (product_id, image_name) VALUES (?, ?)', [productId, filename]);
-        }
-      }
+      };
       
-      res.status(200).json({
-        status: 'success',
-        message: 'Cập nhật sản phẩm thành công'
+      res.render('admin/pages/product_admin', {
+          title: {
+              title: 'Quản lý sản phẩm'
+          },
+          admin: req.admin,
+          user: req.admin, // Add this to make the sidebar template work
+          data: {
+              products,
+              searchKey,
+              totalRow,
+              totalPage,
+              page,
+              limit
+          },
+          formatFunction
       });
     } catch (error) {
-      console.error('Error updating product:', error);
-      res.status(500).json({
-        status: 'error',
-        message: 'Đã có lỗi xảy ra khi cập nhật sản phẩm'
-      });
+      console.error("Error loading products:", error);
+      res.status(500).send("An error occurred loading the products page");
     }
   }
 
-  deleteProduct = async (req, res) => {
+  // Add product page
+  addProductPage = async (req, res) => {
+    try {
+      // Get categories for dropdown
+      const categories = await query('SELECT * FROM categories ORDER BY category_name');
+      
+      res.render('admin/pages/product_add_admin', {
+          title: {
+              title: 'Thêm sản phẩm mới'
+          },
+          admin: req.admin,
+          user: req.admin, // Add this to make the sidebar template work
+          categories
+      });
+    } catch (error) {
+      console.error("Error loading add product page:", error);
+      res.status(500).send("An error occurred loading the add product page");
+    }
+  }
+
+  // Edit product page
+  editProductPage = async (req, res) => {
     try {
       const productId = req.params.id;
       
-      // Check if product exists
-      const product = await query('SELECT * FROM products WHERE product_id = ?', [productId]);
-      if (product.length === 0) {
-        return res.status(404).json({
-          status: 'fail',
-          message: 'Không tìm thấy sản phẩm'
-        });
+      // Get product info
+      const productQuery = `
+          SELECT p.*, c.category_name
+          FROM products p
+          LEFT JOIN categories c ON p.category_id = c.category_id
+          WHERE p.product_id = ?
+      `;
+      
+      const productResult = await query(productQuery, [productId]);
+      
+      if (productResult.length === 0) {
+          return res.status(404).render('admin/pages/error', {
+              title: 'Lỗi - Không tìm thấy sản phẩm',
+              admin: req.admin,
+              user: req.admin, // Add this to make the sidebar template work
+              message: 'Không tìm thấy sản phẩm với ID đã cung cấp.'
+          });
       }
       
-      // Check if product is in any orders
-      const orderDetails = await query('SELECT COUNT(*) as count FROM order_details WHERE product_id = ?', [productId]);
-      if (orderDetails[0].count > 0) {
-        return res.status(400).json({
-          status: 'fail',
-          message: 'Không thể xóa sản phẩm này vì đã có trong đơn hàng'
-        });
-      }
-
-      // Get all images to delete files
-      const images = await query('SELECT * FROM product_images WHERE product_id = ?', [productId]);
+      const product = productResult[0];
       
-      // Delete all images from server
-      for (const image of images) {
-        const imagePath = path.join(__dirname, '../public/imgs/products/', image.image_name);
-        if (fs.existsSync(imagePath)) {
-          fs.unlinkSync(imagePath);
-        }
-      }
+      // Get product variants
+      const variantsQuery = `
+          SELECT * FROM product_variants
+          WHERE product_id = ?
+          ORDER BY product_variant_id
+      `;
       
-      // Delete from database (images and product)
-      await query('DELETE FROM product_images WHERE product_id = ?', [productId]);
-      await query('DELETE FROM products WHERE product_id = ?', [productId]);
+      const variants = await query(variantsQuery, [productId]);
       
-      res.status(200).json({
-        status: 'success',
-        message: 'Xóa sản phẩm thành công'
+      // Get product images
+      const imagesQuery = `
+          SELECT * FROM product_imgs
+          WHERE product_id = ?
+          ORDER BY image_id
+      `;
+      
+      const images = await query(imagesQuery, [productId]);
+      
+      // Get product details (specifications)
+      const specsQuery = `
+          SELECT * FROM product_details
+          WHERE product_id = ?
+          ORDER BY product_detail_id
+      `;
+      
+      const specs = await query(specsQuery, [productId]);
+      
+      // Get all categories for dropdown
+      const categories = await query('SELECT * FROM categories ORDER BY category_name');
+      
+      res.render('admin/pages/product_edit_admin', {
+          title: {
+              title: 'Sửa thông tin sản phẩm'
+          },
+          admin: req.admin,
+          user: req.admin, // Add this to make the sidebar template work
+          product,
+          variants,
+          images,
+          specs,
+          categories
       });
     } catch (error) {
-      console.error('Error deleting product:', error);
-      res.status(500).json({
-        status: 'error',
-        message: 'Đã có lỗi xảy ra khi xóa sản phẩm'
-      });
+      console.error("Error loading edit product page:", error);
+      res.status(500).send("An error occurred loading the edit product page");
     }
   }
 
+  // Add product API
   addProduct = async (req, res) => {
     try {
-      const { 
-        productName, 
-        productDesc, 
-        productPrice, 
-        productSalePrice, 
-        productQuantity, 
-        category
-      } = req.body;
+      // Start transaction
+      await query('START TRANSACTION');
       
-      // Validate
-      if (!productName || !productPrice || !productQuantity || !category) {
+      // Insert basic product info
+      const { product_name, category_id, product_description } = req.body;
+      const product_is_bestseller = req.body.product_is_bestseller ? 1 : 0;
+      const product_is_display = req.body.product_is_display ? 1 : 0;
+      
+      // Validate product name and category
+      if (!product_name || !category_id) {
+        await query('ROLLBACK');
         return res.status(400).json({
-          status: 'fail',
-          message: 'Vui lòng nhập đầy đủ thông tin cần thiết'
+          status: 'error',
+          message: 'Thiếu thông tin sản phẩm hoặc danh mục'
         });
       }
-
-      // Insert product to database
-      const result = await query(`
-        INSERT INTO products 
-        (product_name, product_desc, product_price, product_sale_price, product_quantity, category_id, product_added_date) 
-        VALUES (?, ?, ?, ?, ?, ?, NOW())
-      `, [
-        productName, 
-        productDesc, 
-        productPrice, 
-        productSalePrice || null, 
-        productQuantity,
-        category
-      ]);
       
-      const productId = result.insertId;
-
-      // Handle image uploads
-      if (req.files && req.files.images) {
-        const imagesToUpload = Array.isArray(req.files.images) ? req.files.images : [req.files.images];
+      // Insert into products table
+      const productResult = await query(
+        'INSERT INTO products (product_name, category_id, product_description, product_is_bestseller, product_is_display, product_added_date) VALUES (?, ?, ?, ?, ?, NOW())',
+        [product_name, category_id, product_description, product_is_bestseller, product_is_display]
+      );
+      
+      const productId = productResult.insertId;
+      
+      // Handle variants
+      const variants = [];
+      
+      // Parse variant data from form
+      for (let i = 0; i < 100; i++) { // Arbitrary limit
+        const variantName = req.body[`variants[${i}][name]`];
+        const variantPrice = req.body[`variants[${i}][price]`];
+        const variantStock = req.body[`variants[${i}][stock]`];
+        const variantIsBestseller = req.body[`variants[${i}][is_bestseller]`] ? 1 : 0;
         
-        for (const image of imagesToUpload) {
-          // Generate unique filename
+        if (!variantName || !variantPrice) continue;
+        
+        variants.push({
+          name: variantName,
+          price: variantPrice,
+          stock: variantStock || 100,
+          is_bestseller: variantIsBestseller
+        });
+      }
+      
+      // Check if we have at least one variant
+      if (variants.length === 0) {
+        await query('ROLLBACK');
+        return res.status(400).json({
+          status: 'error',
+          message: 'Sản phẩm cần có ít nhất một biến thể'
+        });
+      }
+      
+      // Insert variants
+      for (const variant of variants) {
+        await query(
+          'INSERT INTO product_variants (product_id, product_variant_name, product_variant_price, product_variant_available, product_variant_is_bestseller, product_variant_added_date, product_variant_is_display) VALUES (?, ?, ?, ?, ?, NOW(), 1)',
+          [productId, variant.name, variant.price, variant.stock, variant.is_bestseller]
+        );
+      }
+      
+      // Handle specifications
+      const specs = [];
+      
+      // Parse spec data from form
+      for (let i = 0; i < 100; i++) { // Arbitrary limit
+        const specName = req.body[`specs[${i}][name]`];
+        const specValue = req.body[`specs[${i}][value]`];
+        
+        if (!specName || !specValue) continue;
+        
+        specs.push({
+          name: specName,
+          value: specValue
+        });
+      }
+      
+      // Insert specs
+      for (const spec of specs) {
+        await query(
+          'INSERT INTO product_details (product_id, product_detail_name, product_detail_value) VALUES (?, ?, ?)',
+          [productId, spec.name, spec.value]
+        );
+      }
+      
+      // Handle image uploads
+      if (req.files && req.files.product_images) {
+        const images = Array.isArray(req.files.product_images) ? req.files.product_images : [req.files.product_images];
+        
+        // Create directory for product images if it doesn't exist
+        const productDir = path.join(__dirname, '../public/imgs/product_image/P' + productId);
+        if (!fs.existsSync(productDir)) {
+          fs.mkdirSync(productDir, { recursive: true });
+        }
+        
+        // Save each image
+        for (const image of images) {
+          const extension = image.name.split('.').pop();
           const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-          const filename = `product_${productId}_${uniqueSuffix}.${image.name.split('.').pop()}`;
+          const fileName = `P${productId}_${uniqueSuffix}.${extension}`;
           
-          // Move the file
-          const uploadPath = path.join(__dirname, '../public/imgs/products/', filename);
+          // Move file to product's directory
+          const uploadPath = path.join(productDir, fileName);
           await image.mv(uploadPath);
           
-          // Save to database
-          await query('INSERT INTO product_images (product_id, image_name) VALUES (?, ?)', [productId, filename]);
+          // Insert into database
+          await query('INSERT INTO product_imgs (product_id, image_name) VALUES (?, ?)', [productId, fileName]);
         }
       }
       
+      // Commit transaction
+      await query('COMMIT');
+      
+      // Return success response
       res.status(201).json({
         status: 'success',
-        message: 'Thêm sản phẩm thành công'
+        message: 'Thêm sản phẩm thành công',
+        productId: productId
       });
     } catch (error) {
+      // Rollback transaction on error
+      await query('ROLLBACK');
       console.error('Error adding product:', error);
       res.status(500).json({
         status: 'error',
@@ -645,64 +671,470 @@ class AdminController {
     }
   }
 
+  // API to update a product
+  updateProduct = async (req, res) => {
+    try {
+        // Start transaction
+        await query('START TRANSACTION');
+        
+        const { product_id, product_name, category_id, product_description } = req.body;
+        const product_is_bestseller = req.body.product_is_bestseller ? 1 : 0;
+        const product_is_display = req.body.product_is_display ? 1 : 0;
+        
+        // Validate
+        if (!product_id || !product_name || !category_id) {
+            await query('ROLLBACK');
+            return res.status(400).json({
+                status: 'error',
+                message: 'Thiếu thông tin sản phẩm'
+            });
+        }
+        
+        // Update product info
+        await query(
+            'UPDATE products SET product_name = ?, category_id = ?, product_description = ?, product_is_bestseller = ?, product_is_display = ? WHERE product_id = ?',
+            [product_name, category_id, product_description, product_is_bestseller, product_is_display, product_id]
+        );
+        
+        // Process variants
+        // First get all existing variants
+        const existingVariants = await query('SELECT product_variant_id FROM product_variants WHERE product_id = ?', [product_id]);
+        const existingVariantIds = existingVariants.map(v => v.product_variant_id);
+        
+        // Track which variants to keep
+        const variantIdsToKeep = [];
+        
+        // Process variants from the form
+        for (let i = 0; i < 100; i++) { // Arbitrary limit
+            const variantName = req.body[`variants[${i}][name]`];
+            const variantPrice = req.body[`variants[${i}][price]`];
+            const variantStock = req.body[`variants[${i}][stock]`];
+            const variantId = req.body[`variants[${i}][id]`];
+            const variantIsBestseller = req.body[`variants[${i}][is_bestseller]`] ? 1 : 0;
+            
+            if (!variantName || !variantPrice) continue;
+            
+            if (variantId) {
+                // Update existing variant
+                await query(
+                    'UPDATE product_variants SET product_variant_name = ?, product_variant_price = ?, product_variant_available = ?, product_variant_is_bestseller = ? WHERE product_variant_id = ? AND product_id = ?',
+                    [variantName, variantPrice, variantStock, variantIsBestseller, variantId, product_id]
+                );
+                variantIdsToKeep.push(Number(variantId));
+            } else {
+                // Insert new variant
+                const result = await query(
+                    'INSERT INTO product_variants (product_id, product_variant_name, product_variant_price, product_variant_available, product_variant_is_bestseller, product_variant_added_date, product_variant_is_display) VALUES (?, ?, ?, ?, ?, NOW(), 1)',
+                    [productId, variantName, variantPrice, variantStock, variantIsBestseller]
+                );
+                variantIdsToKeep.push(result.insertId);
+            }
+        }
+        
+        // Delete variants that weren't in the form
+        const variantIdsToDelete = existingVariantIds.filter(id => !variantIdsToKeep.includes(id));
+        
+        if (variantIdsToDelete.length > 0) {
+            await query(
+                'DELETE FROM product_variants WHERE product_variant_id IN (?) AND product_id = ?',
+                [variantIdsToDelete, product_id]
+            );
+        }
+        
+        // Process specifications
+        // First get all existing specs
+        const existingSpecs = await query('SELECT product_detail_id FROM product_details WHERE product_id = ?', [product_id]);
+        const existingSpecIds = existingSpecs.map(s => s.product_detail_id);
+        
+        // Track which specs to keep
+        const specIdsToKeep = [];
+        
+        // Process specs from the form
+        for (let i = 0; i < 100; i++) { // Arbitrary limit
+            const specName = req.body[`specs[${i}][name]`];
+            const specValue = req.body[`specs[${i}][value]`];
+            const specId = req.body[`specs[${i}][id]`];
+            
+            if (!specName || !specValue) continue;
+            
+            if (specId) {
+                // Update existing spec
+                await query(
+                    'UPDATE product_details SET product_detail_name = ?, product_detail_value = ? WHERE product_detail_id = ? AND product_id = ?',
+                    [specName, specValue, specId, product_id]
+                );
+                specIdsToKeep.push(Number(specId));
+            } else {
+                // Insert new spec
+                const result = await query(
+                    'INSERT INTO product_details (product_id, product_detail_name, product_detail_value) VALUES (?, ?, ?)',
+                    [product_id, specName, specValue]
+                );
+                specIdsToKeep.push(result.insertId);
+            }
+        }
+        
+        // Delete specs that weren't in the form
+        const specIdsToDelete = existingSpecIds.filter(id => !specIdsToKeep.includes(id));
+        
+        if (specIdsToDelete.length > 0) {
+            await query(
+                'DELETE FROM product_details WHERE product_detail_id IN (?) AND product_id = ?',
+                [specIdsToDelete, product_id]
+            );
+        }
+        
+        // Handle image deletions
+        const deleteImages = req.body.delete_images || [];
+        if (deleteImages.length > 0) {
+            // Get filenames to delete files
+            for (const imageId of deleteImages) {
+                const image = await query('SELECT image_name FROM product_imgs WHERE image_id = ? AND product_id = ?', [imageId, product_id]);
+                
+                if (image.length > 0) {
+                    // Delete file from server
+                    const imagePath = path.join(__dirname, '../public/imgs/product_image/P' + product_id, image[0].image_name);
+                    if (fs.existsSync(imagePath)) {
+                        fs.unlinkSync(imagePath);
+                    }
+                    
+                    // Delete from database
+                    await query('DELETE FROM product_imgs WHERE image_id = ?', [imageId]);
+                }
+            }
+        }
+        
+        // Handle new image uploads
+        const newImageCount = req.body.new_image_count || 0;
+        
+        if (newImageCount > 0 && req.files) {
+            // Ensure product image directory exists
+            const productImageDir = path.join(__dirname, '../public/imgs/product_image/P' + product_id);
+            if (!fs.existsSync(productImageDir)) {
+                fs.mkdirSync(productImageDir, { recursive: true });
+            }
+            
+            // Process each new image
+            for (let i = 0; i < newImageCount; i++) {
+                const imageField = `new_images_${i}`;
+                if (!req.files[imageField]) continue;
+                
+                const image = req.files[imageField];
+                const extension = image.name.split('.').pop();
+                const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+                const fileName = `P${product_id}_${uniqueSuffix}.${extension}`;
+                
+                // Move file to product's directory
+                const uploadPath = path.join(productImageDir, fileName);
+                await image.mv(uploadPath);
+                
+                // Insert into database
+                await query('INSERT INTO product_imgs (product_id, image_name) VALUES (?, ?)', [product_id, fileName]);
+            }
+        }
+        
+        // Commit transaction
+        await query('COMMIT');
+        
+        res.status(200).json({
+            status: 'success',
+            message: 'Cập nhật sản phẩm thành công'
+        });
+    } catch (error) {
+        // Rollback transaction on error
+        await query('ROLLBACK');
+        console.error('Error updating product:', error);
+        res.status(500).json({
+            status: 'error',
+            message: 'Đã có lỗi xảy ra khi cập nhật sản phẩm'
+        });
+    }
+  }
+
+  // Delete product
+  deleteProduct = async (req, res) => {
+    try {
+      const productId = req.params.id;
+      
+      if (!productId) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'Missing product ID'
+        });
+      }
+      
+      // Start transaction
+      await query('START TRANSACTION');
+      
+      // Check if product exists
+      const product = await query('SELECT * FROM products WHERE product_id = ?', [productId]);
+      
+      if (product.length === 0) {
+        await query('ROLLBACK');
+        return res.status(404).json({
+          status: 'error',
+          message: 'Product not found'
+        });
+      }
+      
+      // Check if product is in any orders
+      const variants = await query('SELECT product_variant_id FROM product_variants WHERE product_id = ?', [productId]);
+      const variantIds = variants.map(v => v.product_variant_id);
+      
+      if (variantIds.length > 0) {
+        const orders = await query('SELECT COUNT(*) as count FROM order_details WHERE product_variant_id IN (?)', [variantIds]);
+        if (orders[0].count > 0) {
+          await query('ROLLBACK');
+          return res.status(400).json({
+            status: 'error',
+            message: 'Cannot delete product that is in orders'
+          });
+        }
+      }
+      
+      // Get product images to delete files
+      const images = await query('SELECT * FROM product_imgs WHERE product_id = ?', [productId]);
+      
+      // Delete image files
+      for (const image of images) {
+        const imagePath = path.join(__dirname, '../public/imgs/product_image/P' + productId, image.image_name);
+        if (fs.existsSync(imagePath)) {
+          fs.unlinkSync(imagePath);
+        }
+      }
+      
+      // Delete product directory if exists
+      const productDir = path.join(__dirname, '../public/imgs/product_image/P' + productId);
+      if (fs.existsSync(productDir)) {
+        fs.rmdirSync(productDir, { recursive: true });
+      }
+      
+      // Delete from database
+      await query('DELETE FROM product_variants WHERE product_id = ?', [productId]);
+      await query('DELETE FROM product_details WHERE product_id = ?', [productId]);
+      await query('DELETE FROM product_imgs WHERE product_id = ?', [productId]);
+      await query('DELETE FROM products WHERE product_id = ?', [productId]);
+      
+      // Commit transaction
+      await query('COMMIT');
+      
+      res.status(200).json({
+        status: 'success',
+        message: 'Product deleted successfully'
+      });
+    } catch (error) {
+      await query('ROLLBACK');
+      console.error('Error deleting product:', error);
+      res.status(500).json({
+        status: 'error',
+        message: 'An error occurred while deleting the product'
+      });
+    }
+  }
+
+  // Add a new API method for bulk deletion
+  bulkDeleteProducts = async (req, res) => {
+    try {
+        const { productIds } = req.body;
+        
+        if (!productIds || !Array.isArray(productIds) || productIds.length === 0) {
+            return res.status(400).json({
+                status: 'error',
+                message: 'Không có sản phẩm được chọn để xóa'
+            });
+        }
+        
+        // Start transaction
+        await query('START TRANSACTION');
+        
+        // For each product, check if it's in orders
+        const checkOrdersPromises = productIds.map(async (id) => {
+            const variants = await query('SELECT product_variant_id FROM product_variants WHERE product_id = ?', [id]);
+            const variantIds = variants.map(v => v.product_variant_id);
+            
+            if (variantIds.length > 0) {
+                const orders = await query('SELECT COUNT(*) as count FROM order_details WHERE product_variant_id IN (?)', [variantIds]);
+                return {
+                    productId: id,
+                    inOrders: orders[0].count > 0
+                };
+            }
+            
+            return { productId: id, inOrders: false };
+        });
+        
+        const checkResults = await Promise.all(checkOrdersPromises);
+        const productsToDelete = checkResults.filter(r => !r.inOrders).map(r => r.productId);
+        const productsInOrders = checkResults.filter(r => r.inOrders).map(r => r.productId);
+        
+        // Delete products that aren't in orders
+        if (productsToDelete.length > 0) {
+            // Delete product files first
+            for (const productId of productsToDelete) {
+                // Get images
+                const images = await query('SELECT * FROM product_imgs WHERE product_id = ?', [productId]);
+                
+                // Delete image files
+                for (const image of images) {
+                    const imagePath = path.join(__dirname, '../public/imgs/product_image/P' + productId, image.image_name);
+                    if (fs.existsSync(imagePath)) {
+                        fs.unlinkSync(imagePath);
+                    }
+                }
+                
+                // Delete product directory if exists
+                const productDir = path.join(__dirname, '../public/imgs/product_image/P' + productId);
+                if (fs.existsSync(productDir)) {
+                    fs.rmdirSync(productDir, { recursive: true });
+                }
+                
+                // Delete from database
+                // Delete product variants
+                await query('DELETE FROM product_variants WHERE product_id = ?', [productId]);
+                
+                // Delete product details
+                await query('DELETE FROM product_details WHERE product_id = ?', [productId]);
+                
+                // Delete product images
+                await query('DELETE FROM product_imgs WHERE product_id = ?', [productId]);
+                
+                // Delete the product
+                await query('DELETE FROM products WHERE product_id = ?', [productId]);
+            }
+        }
+        
+        // Commit transaction
+        await query('COMMIT');
+        
+        // Return response based on results
+        if (productsInOrders.length > 0) {
+            return res.status(200).json({
+                status: 'partial',
+                message: `Đã xóa ${productsToDelete.length} sản phẩm. ${productsInOrders.length} sản phẩm không thể xóa do đã có trong đơn hàng.`,
+                deletedCount: productsToDelete.length,
+                failedCount: productsInOrders.length
+            });
+        } else {
+            return res.status(200).json({
+                status: 'success',
+                message: `Đã xóa thành công ${productsToDelete.length} sản phẩm.`,
+                deletedCount: productsToDelete.length
+            });
+        }
+    } catch (error) {
+        // Rollback transaction on error
+        await query('ROLLBACK');
+        console.error('Error bulk deleting products:', error);
+        res.status(500).json({
+            status: 'error',
+            message: 'Đã có lỗi xảy ra khi xóa sản phẩm'
+        });
+    }
+  }
+
+  // Add a new API method for bulk visibility update
+  updateProductsVisibility = async (req, res) => {
+    try {
+        const { productIds, visibility } = req.body;
+        
+        if (!productIds || !Array.isArray(productIds) || productIds.length === 0) {
+            return res.status(400).json({
+                status: 'error',
+                message: 'Không có sản phẩm được chọn'
+            });
+        }
+        
+        if (visibility !== 0 && visibility !== 1) {
+            return res.status(400).json({
+                status: 'error',
+                message: 'Trạng thái hiển thị không hợp lệ'
+            });
+        }
+        
+        // Update products visibility
+        await query('UPDATE products SET product_is_display = ? WHERE product_id IN (?)', [visibility, productIds]);
+        
+        res.status(200).json({
+            status: 'success',
+            message: `Đã cập nhật trạng thái hiển thị cho ${productIds.length} sản phẩm.`
+        });
+    } catch (error) {
+        console.error('Error updating products visibility:', error);
+        res.status(500).json({
+            status: 'error',
+            message: 'Đã có lỗi xảy ra khi cập nhật trạng thái hiển thị sản phẩm'
+        });
+    }
+  }
+
   // ORDERS
   orders = async (req, res) => {
-    const user = req.user;
+    try {
+      const user = req.admin;
 
-    // Fetch orders with user info
-    const orders = await query(`
-      SELECT o.*, u.user_fullname
-      FROM orders o
-      JOIN users u ON o.user_id = u.user_id
-      ORDER BY o.order_date DESC
-    `);
+      // Fetch orders with user info
+      const orders = await query(`
+        SELECT o.*, u.user_fullname
+        FROM orders o
+        JOIN users u ON o.user_id = u.user_id
+        ORDER BY o.order_date DESC
+      `);
 
-    res.render('admin/pages/orders_admin', {
-      title: {
-        title: 'Quản lý đơn hàng'
-      },
-      user: user,
-      orders
-    });
+      res.render('admin/pages/orders_admin', {
+        title: {
+          title: 'Quản lý đơn hàng'
+        },
+        user: user,
+        orders
+      });
+    } catch (error) {
+      console.error("Error loading orders:", error);
+      res.status(500).send("An error occurred loading the orders page");
+    }
   }
 
   order_details = async (req, res) => {
-    const user = req.user;
-    const orderId = req.params.id;
+    try {
+      const user = req.admin;
+      const orderId = req.params.id;
 
-    // Fetch order with user info
-    const orders = await query(`
-      SELECT o.*, u.user_fullname, u.user_email, u.user_phone
-      FROM orders o
-      JOIN users u ON o.user_id = u.user_id
-      WHERE o.order_id = ?
-    `, [orderId]);
-    
-    if (orders.length === 0) {
-      return res.redirect('/admin/orders_admin');
+      // Fetch order with user info
+      const orders = await query(`
+        SELECT o.*, u.user_fullname, u.user_email, u.user_phone
+        FROM orders o
+        JOIN users u ON o.user_id = u.user_id
+        WHERE o.order_id = ?
+      `, [orderId]);
+      
+      if (orders.length === 0) {
+        return res.redirect('/admin/orders_admin');
+      }
+
+      // Fetch order details with product info
+      const orderDetails = await query(`
+        SELECT od.*, p.product_name, p.product_price, pi.image_name
+        FROM order_details od
+        JOIN products p ON od.product_id = p.product_id
+        LEFT JOIN (
+          SELECT product_id, MIN(image_id) as min_image_id, image_name
+          FROM product_imgs
+          GROUP BY product_id
+        ) pi ON p.product_id = pi.product_id
+        WHERE od.order_id = ?
+      `, [orderId]);
+
+      res.render('admin/pages/order_details_admin', {
+        title: {
+          title: 'Chi tiết đơn hàng'
+        },
+        user: user,
+        order: orders[0],
+        orderDetails
+      });
+    } catch (error) {
+      console.error("Error loading order details:", error);
+      res.status(500).send("An error occurred loading the order details page");
     }
-
-    // Fetch order details with product info
-    const orderDetails = await query(`
-      SELECT od.*, p.product_name, p.product_price, pi.image_name
-      FROM order_details od
-      JOIN products p ON od.product_id = p.product_id
-      LEFT JOIN (
-        SELECT product_id, MIN(image_id) as min_image_id, image_name
-        FROM product_images
-        GROUP BY product_id
-      ) pi ON p.product_id = pi.product_id
-      WHERE od.order_id = ?
-    `, [orderId]);
-
-    res.render('admin/pages/order_details_admin', {
-      title: {
-        title: 'Chi tiết đơn hàng'
-      },
-      user: user,
-      order: orders[0],
-      orderDetails
-    });
   }
 
   // ORDER API
@@ -729,7 +1161,7 @@ class AdminController {
       console.error('Error updating order status:', error);
       res.status(500).json({
         status: 'error',
-        message: 'Đã có lỗi xảy ra khi cập nhật trạng thái đơn hàng'
+        message: 'Đã xảy ra lỗi khi cập nhật trạng thái đơn hàng'
       });
     }
   }
@@ -757,14 +1189,15 @@ class AdminController {
       console.error('[ADMIN] Error loading users:', error.message);
       res.status(500).send("Error loading users page");
     }
-  };
+  }
  
   // Add this method to your controller
   category_update_tool = (req, res) => {
     return res.render('admin/pages/category_update_tool', {
-        title: {
-            title: 'Công cụ cập nhật danh mục'
-        }
+      title: {
+        title: 'Công cụ cập nhật danh mục'
+      },
+      user: req.admin
     });
   }
 

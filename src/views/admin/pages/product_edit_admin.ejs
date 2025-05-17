@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="author" content="IE104.O12_Nhom2">
+    <meta name="description" content="Sửa thông tin sản phẩm TECHTWO">
+    <link rel="shortcut icon" type="image/x-icon" href="/imgs/ico-logo-blue.png">
+    <link rel="stylesheet" href="/styles/admin/pages/product_form.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+
+    <title>TECHTWO.Admin - Sửa sản phẩm</title>
+</head>
+
+<body>
+    <div class="grid-container">
+        <%- include('../partials/sidebar_admin') %>
+        <%- include('../partials/header_admin', {title: {title: 'Sửa thông tin sản phẩm'} }) %>
+
+        <main class="main-container">
+            <div class="page-header">
+                <div class="row align-items-center">
+                    <%- include('../partials/breadcrumb.ejs', {breadcrumb: [{text: 'Sản phẩm', link: '/admin/products_admin'}, {text: 'Sửa sản phẩm', link: '#'}]}) %>
+
+                    <div class="page-header__title">
+                        <h1>Sửa sản phẩm: <%= product.product_name %></h1>
+                        <button id="saveProductBtn" class="btn-admin btn-primary">
+                            <span class="material-symbols-outlined"> save </span> Lưu
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <form id="productForm" method="post">
+                    <input type="hidden" id="product_id" name="product_id" value="<%= product.product_id %>">
+                    
+                    <div class="product-form-container">
+                        <!-- Thông tin cơ bản -->
+                        <div class="form-card">
+                            <div class="card-header">
+                                <h4>Thông tin cơ bản</h4>
+                            </div>
+                            <div class="card-body">
+                                <div class="form-group">
+                                    <label for="product_name">Tên sản phẩm <span class="required">*</span></label>
+                                    <input type="text" class="form-control" id="product_name" name="product_name" value="<%= product.product_name %>" required>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="category_id">Danh mục <span class="required">*</span></label>
+                                    <select class="form-control" id="category_id" name="category_id" required>
+                                        <option value="">-- Chọn danh mục --</option>
+                                        <% categories.forEach(function(category) { %>
+                                            <option value="<%= category.category_id %>" <%= category.category_id === product.category_id ? 'selected' : '' %>><%= category.category_name %></option>
+                                        <% }) %>
+                                    </select>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="product_description">Mô tả sản phẩm</label>
+                                    <textarea class="form-control" id="product_description" name="product_description" rows="5"><%= product.product_description || '' %></textarea>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <div class="checkbox-group">
+                                        <div class="checkbox-item">
+                                            <input type="checkbox" id="product_is_bestseller" name="product_is_bestseller" <%= product.product_is_bestseller ? 'checked' : '' %>>
+                                            <label for="product_is_bestseller">Sản phẩm bán chạy</label>
+                                        </div>
+                                        <div class="checkbox-item">
+                                            <input type="checkbox" id="product_is_display" name="product_is_display" <%= product.product_is_display ? 'checked' : '' %>>
+                                            <label for="product_is_display">Hiển thị sản phẩm</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Hình ảnh -->
+                        <div class="form-card">
+                            <div class="card-header">
+                                <h4>Hình ảnh sản phẩm <span class="required">*</span></h4>
+                            </div>
+                            <div class="card-body">
+                                <div id="current-images" class="current-images">
+                                    <h5>Hình ảnh hiện tại</h5>
+                                    <div class="image-gallery">
+                                        <% if (images && images.length > 0) { %>
+                                            <% images.forEach(function(img) { %>
+                                                <div class="image-item" data-id="<%= img.image_id %>">
+                                                    <img src="/imgs/product_image/P<%= product.product_id %>/<%= img.image_name %>" alt="<%= product.product_name %>">
+                                                    <button type="button" class="remove-image" data-id="<%= img.image_id %>">
+                                                        <span class="material-symbols-outlined">delete</span>
+                                                    </button>
+                                                    <input type="hidden" name="existing_images[]" value="<%= img.image_id %>">
+                                                </div>
+                                            <% }) %>
+                                        <% } else { %>
+                                            <p>Sản phẩm chưa có hình ảnh</p>
+                                        <% } %>
+                                    </div>
+                                </div>
+                                
+                                <div class="dz-dropzone dz-dropzone-card">
+                                    <div class="dz-message">
+                                        <img class="img-upload" src="/imgs/admin/img-upload.svg" alt="Upload Image">
+                                        <h5>Thêm hình ảnh mới</h5>
+                                        <p>Kéo và thả hình ảnh tại đây</p>
+                                        <div class="dz-message-btn">
+                                            <input type="file" name="product_images" id="product_images" accept="image/*" multiple style="display: none">
+                                            <label for="product_images" class="image-upload-label">
+                                                <span class="material-symbols-rounded"> upload </span>
+                                                Chọn ảnh
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div id="image-preview-container" class="image-preview-container"></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Biến thể sản phẩm -->
+                        <div class="form-card">
+                            <div class="card-header">
+                                <h4>Biến thể sản phẩm <span class="required">*</span></h4>
+                            </div>
+                            <div class="card-body">
+                                <div id="variants-container">
+                                    <% if (variants && variants.length > 0) { %>
+                                        <% variants.forEach(function(variant, index) { %>
+                                            <div class="variant-item" data-id="<%= variant.product_variant_id %>" data-index="<%= index %>">
+                                                <div class="variant-header">
+                                                    <h5>Biến thể #<%= index + 1 %></h5>
+                                                    <% if (variants.length > 1) { %>
+                                                        <button type="button" class="btn-remove-variant">
+                                                            <span class="material-symbols-rounded">delete</span>
+                                                        </button>
+                                                    <% } %>
+                                                </div>
+                                                <div class="variant-body">
+                                                    <input type="hidden" name="variants[<%= index %>][id]" value="<%= variant.product_variant_id %>">
+                                                    <div class="form-group">
+                                                        <label for="variant_name_<%= index %>">Tên biến thể <span class="required">*</span></label>
+                                                        <input type="text" class="form-control variant-name" id="variant_name_<%= index %>" name="variants[<%= index %>][name]" value="<%= variant.product_variant_name %>" required>
+                                                    </div>
+                                                    <div class="form-row">
+                                                        <div class="form-group">
+                                                            <label for="variant_price_<%= index %>">Giá <span class="required">*</span></label>
+                                                            <input type="number" class="form-control" id="variant_price_<%= index %>" name="variants[<%= index %>][price]" value="<%= variant.product_variant_price %>" required min="0">
+                                                        </div>
+                                                        <div class="form-group">
+                                                            <label for="variant_stock_<%= index %>">Số lượng tồn <span class="required">*</span></label>
+                                                            <input type="number" class="form-control" id="variant_stock_<%= index %>" name="variants[<%= index %>][stock]" value="<%= variant.product_variant_available %>" required min="0">
+                                                        </div>
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <div class="checkbox-group">
+                                                            <div class="checkbox-item">
+                                                                <input type="checkbox" id="variant_bestseller_<%= index %>" name="variants[<%= index %>][is_bestseller]" <%= variant.product_variant_is_bestseller ? 'checked' : '' %>>
+                                                                <label for="variant_bestseller_<%= index %>">Biến thể bán chạy</label>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        <% }) %>
+                                    <% } else { %>
+                                        <div class="variant-item" data-index="0">
+                                            <div class="variant-header">
+                                                <h5>Biến thể #1</h5>
+                                            </div>
+                                            <div class="variant-body">
+                                                <div class="form-group">
+                                                    <label for="variant_name_0">Tên biến thể <span class="required">*</span></label>
+                                                    <input type="text" class="form-control variant-name" id="variant_name_0" name="variants[0][name]" required>
+                                                </div>
+                                                <div class="form-row">
+                                                    <div class="form-group">
+                                                        <label for="variant_price_0">Giá <span class="required">*</span></label>
+                                                        <input type="number" class="form-control" id="variant_price_0" name="variants[0][price]" required min="0">
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <label for="variant_stock_0">Số lượng tồn <span class="required">*</span></label>
+                                                        <input type="number" class="form-control" id="variant_stock_0" name="variants[0][stock]" required min="0" value="100">
+                                                    </div>
+                                                </div>
+                                                <div class="form-group">
+                                                    <div class="checkbox-group">
+                                                        <div class="checkbox-item">
+                                                            <input type="checkbox" id="variant_bestseller_0" name="variants[0][is_bestseller]">
+                                                            <label for="variant_bestseller_0">Biến thể bán chạy</label>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    <% } %>
+                                </div>
+                                <button type="button" id="add-variant-btn" class="btn-add">
+                                    <span class="material-symbols-rounded">add_circle</span> Thêm biến thể
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Thông số kỹ thuật -->
+                        <div class="form-card">
+                            <div class="card-header">
+                                <h4>Thông số kỹ thuật</h4>
+                            </div>
+                            <div class="card-body">
+                                <div id="specs-container">
+                                    <% if (specs && specs.length > 0) { %>
+                                        <% specs.forEach(function(spec, index) { %>
+                                            <div class="spec-item" data-id="<%= spec.product_detail_id %>" data-index="<%= index %>">
+                                                <div class="form-row">
+                                                    <input type="hidden" name="specs[<%= index %>][id]" value="<%= spec.product_detail_id %>">
+                                                    <div class="form-group">
+                                                        <label for="spec_name_<%= index %>">Tên thông số</label>
+                                                        <input type="text" class="form-control" id="spec_name_<%= index %>" name="specs[<%= index %>][name]" value="<%= spec.product_detail_name %>" placeholder="Ví dụ: Bộ nhớ, RAM...">
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <label for="spec_value_<%= index %>">Giá trị</label>
+                                                        <input type="text" class="form-control" id="spec_value_<%= index %>" name="specs[<%= index %>][value]" value="<%= spec.product_detail_value %>" placeholder="Ví dụ: 64GB, 8GB...">
+                                                    </div>
+                                                    <div class="form-group spec-action">
+                                                        <button type="button" class="btn-remove-spec">
+                                                            <span class="material-symbols-rounded">delete</span>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        <% }) %>
+                                    <% } else { %>
+                                        <div class="spec-item" data-index="0">
+                                            <div class="form-row">
+                                                <div class="form-group">
+                                                    <label for="spec_name_0">Tên thông số</label>
+                                                    <input type="text" class="form-control" id="spec_name_0" name="specs[0][name]" placeholder="Ví dụ: Bộ nhớ, RAM...">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label for="spec_value_0">Giá trị</label>
+                                                    <input type="text" class="form-control" id="spec_value_0" name="specs[0][value]" placeholder="Ví dụ: 64GB, 8GB...">
+                                                </div>
+                                                <div class="form-group spec-action"></div>
+                                            </div>
+                                        </div>
+                                    <% } %>
+                                </div>
+                                <button type="button" id="add-spec-btn" class="btn-add">
+                                    <span class="material-symbols-rounded">add_circle</span> Thêm thông số
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </main>
+    </div>
+
+    <script src="/scripts/admin/index_admin.js"></script>
+    <script src="/scripts/admin/product_edit.js"></script>
+</body>
+</html>

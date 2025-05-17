@@ -6,9 +6,10 @@
 	<meta name="theme-color" content="#2a7ee4">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<meta name="author" content="IE104.O12_Nhom2">
-	<meta name="description" content="Chào mừng bạn đến với TECHTWO - địa chỉ mua sắm trực tuyến hàng đầu về điện máy! Khám phá thế giới công nghệ với sự đa dạng và chất lượng tốt nhất từ máy tính, điện thoại di động đến các sản phẩm gia dụng thông minh. Mua sắm an toàn, thuận tiện và tiết kiệm ngay hôm nay với các ưu đãi độc quyền. TECHTWO - Nơi nâng cao cuộc sống thông qua công nghệ!.">
+	<meta name="description" content="Quản lý sản phẩm TECHTWO">
 	<link rel="shortcut icon" type="image/x-icon" href="/imgs/ico-logo-blue.png">
 	<link rel="stylesheet" href="/styles/admin/pages/cate_admin.css">
+	<link rel="stylesheet" href="/styles/admin/pages/product_admin.css">
 
 	<title>TECHTWO.Admin - Sản phẩm</title>
 </head>
@@ -27,10 +28,10 @@
 					<div class="">
 						<h3 class="main-header-title">Sản phẩm <span class="main-header__badge"><%= data.totalRow %></span></h3>
 						<div class="export-import">
-							<a class="admin-a text-body" href="#" data-bs-toggle="modal" data-bs-target="#exportProductsModal">
+							<a class="admin-a text-body" href="#">
 								<span class="material-symbols-rounded"> download </span> Xuất file
 							</a>
-							<a class="admin-a text-body" href="#" data-bs-toggle="modal" data-bs-target="#importProductsModal">
+							<a class="admin-a text-body" href="#">
 								<span class="material-symbols-rounded"> upload_file </span> Nhập file
 							</a>
 						</div>
@@ -38,7 +39,6 @@
 					<!-- End Col -->
 
 					<div class="">
-
 						<a class="admin-a btn-admin btn-primary" href="/admin/products_admin/add">
 							<span class="material-symbols-rounded"> add </span>
 							<p>Thêm</p>
@@ -51,13 +51,13 @@
 				<!-- Nav -->
 				<ul class="main__nav main-header__tabs nav" id="pageHeaderTab" role="tablist">
 					<li class="nav__item active">
-						<a class="admin-a nav__link active" href="#">Tất cả (58)</a>
+						<a class="admin-a nav__link active" href="#">Tất cả (<%= data.totalRow %>)</a>
 					</li>
 					<li class="nav__item">
-						<a class="admin-a nav__link disabled" href="#" tabindex="-1">Hiện (10)</a>
+						<a class="admin-a nav__link" href="#" tabindex="-1">Hiện (<%= data.products.filter(p => p.product_is_display === 1).length %>)</a>
 					</li>
 					<li class="admin-a nav__item">
-						<a class="admin-a nav__link disabled" href="#" tabindex="-1">Ẩn (12)</a>
+						<a class="admin-a nav__link" href="#" tabindex="-1">Ẩn (<%= data.products.filter(p => p.product_is_display === 0).length %>)</a>
 					</li>
 				</ul>
 				<!-- End Nav -->
@@ -68,27 +68,27 @@
 			<div class="main__filter">
 				<div>
 					<div class="filter__btn-group">
-						<a class="admin-a btn-admin btn-outline-danger" href="#">
+						<button class="btn-admin btn-outline-danger" id="deleteSelectedBtn">
 							<span class="material-symbols-rounded"> delete_forever </span>
 							<p>Xóa</p>
-						</a>
-						<a class="admin-a btn-admin btn-white" href="#">
+						</button>
+						<button class="btn-admin btn-white" id="showSelectedBtn">
 							<span class="material-symbols-rounded"> visibility </span>
 							<p>Hiện</p>
-						</a>
-						<a class="admin-a btn-admin btn-white" href="#">
+						</button>
+						<button class="btn-admin btn-white" id="hideSelectedBtn">
 							<span class="material-symbols-rounded"> visibility_off </span>
 							<p>Ẩn</p>
-						</a>
+						</button>
 					</div>
 				</div>
 
 				<div class="main__search search">
-					<form>
+					<form action="/admin/products_admin" method="GET">
 						<button type="submit" class="search__button">
 							<span class="material-symbols-rounded"> search </span>
 						</button>
-						<input type="search" class="search__term" name="searchKey" id="search" placeholder="Enter" value="<%= (data.searchKey) ? data.searchKey: '' %>">
+						<input type="search" class="search__term" name="searchKey" id="search" placeholder="Tìm kiếm..." value="<%= (data.searchKey) ? data.searchKey: '' %>">
 					</form>
 				</div>
 			</div>
@@ -99,11 +99,14 @@
 				<table class="main__table-responsive table">
 					<thead>
 						<tr class="table__heading">
-							<th><input type="checkbox" class="checkbox"></th>
+							<th><input type="checkbox" class="checkbox" id="selectAll"></th>
 							<th>#ID
 								<span class="material-symbols-rounded"> arrow_drop_down </span>
 							</th>
 							<th>Tên sản phẩm
+								<span class="material-symbols-rounded"> arrow_drop_down </span>
+							</th>
+							<th>Danh mục
 								<span class="material-symbols-rounded"> arrow_drop_down </span>
 							</th>
 							<th>Số biến thể
@@ -115,7 +118,7 @@
 							<th>Trạng thái
 								<span class="material-symbols-rounded"> tune </span>
 							</th>
-							<th>Action</th>
+							<th>Thao tác</th>
 						</tr>
 					</thead>
 
@@ -126,37 +129,29 @@
 						</tr>
 						<% } else { %>
 						<% data.products.forEach(function(product) { %>
-						<tr class="employeeDetails">
-							<td><input type="checkbox" class="checkbox"></td>
-							<td> <%= product.product_id ?? 'Null' %> </td>
-							<td>
-								<img src="/imgs/product_image/P<%= product.product_id %>/<%= product.product_avt_img ?? 'default.png' %>" alt="<%= product.product_name ?? 'Null' %>">
-								<%= product.product_name ?? 'Null' %>
+						<tr class="productItem" data-id="<%= product.product_id %>">
+							<td><input type="checkbox" class="checkbox productCheckbox"></td>
+							<td><%= product.product_id %></td>
+							<td class="product-name-cell">
+								<img src="/imgs/product_image/P<%= product.product_id %>/<%= product.product_avt_img || 'default.png' %>" alt="<%= product.product_name %>">
+								<span><%= product.product_name %></span>
 							</td>
-							<td> <%= product.product_count ?? 'Null' %> </td>
-							<td> <%= formatFunction.toCurrency(Number(product.revenue)) %></td>
-							<td class="<%= product.product_is_bestseller ? 'status good' : '' %> ">
-								<p> <%= product.product_is_bestseller ? 'Bán chạy' : '' %> </p>
+							<td><%= product.category_name || 'Không có' %></td>
+							<td><%= product.product_count || 0 %></td>
+							<td><%= formatFunction.toCurrency(Number(product.revenue) || 0) %></td>
+							<td class="status <%= product.product_is_bestseller ? 'good' : '' %> <%= product.product_is_display ? '' : 'hidden' %>">
+								<p><%= product.product_is_bestseller ? 'Bán chạy' : '' %> <%= product.product_is_display ? '' : 'Đã ẩn' %></p>
 							</td>
 							<td>
 								<!-- Button Group -->
-								<ul class="action__dropdown dropdown">
-									<li>
-										<span class="dropdown-menu-toggle material-symbols-rounded"> more_vert </span>
-
-										<ul class="dropdown__list">
-											<li>
-												<a class="admin-a" href="#">Sửa</a>
-											</li>
-											<li>
-												<a class="admin-a" href="#">Ẩn</a>
-											</li>
-											<li>
-												<a class="admin-a" href="#">Xóa</a>
-											</li>
-										</ul>
-									</li>
-								</ul>
+								<div class="action-buttons">
+									<a href="/admin/products_admin/edit/<%= product.product_id %>" class="btn-admin btn-edit">
+										<span class="material-symbols-rounded">edit</span>
+									</a>
+									<button class="btn-admin btn-delete" data-id="<%= product.product_id %>">
+										<span class="material-symbols-rounded">delete</span>
+									</button>
+								</div>
 								<!-- End Button Group -->
 							</td>
 						</tr>
@@ -170,10 +165,22 @@
 	</div>
 	<!-- End Main -->
 
+	<!-- Confirmation Modal -->
+	<div class="modal-overlay" id="deleteConfirmModal" style="display: none;">
+		<div class="modal-container">
+			<h3>Xác nhận xóa</h3>
+			<p>Bạn có chắc chắn muốn xóa sản phẩm này không?</p>
+			<div class="modal-buttons">
+				<button id="cancelDelete" class="btn-admin btn-secondary">Hủy</button>
+				<button id="confirmDelete" class="btn-admin btn-danger">Xóa</button>
+			</div>
+		</div>
+	</div>
+
 	<!-- Scripts -->
 	<script src="/scripts/admin/cate_admin.js"></script>
 	<script src="/scripts/admin/index_admin.js"></script>
-
+	<script src="/scripts/admin/product_admin.js"></script>
 </body>
 
 </html>
