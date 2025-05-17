@@ -1,39 +1,34 @@
 /**
- * Middleware to log all route requests with detailed information
+ * Middleware to log detailed route information for debugging
  */
 const routeLogger = (req, res, next) => {
-    const timestamp = new Date().toISOString();
-    console.log('\n[ROUTE ACCESS]', timestamp);
-    console.log(`${req.method} ${req.originalUrl}`);
-    console.log('Headers:', {
-        'content-type': req.headers['content-type'],
-        'content-length': req.headers['content-length'],
-        'user-agent': req.headers['user-agent']
-    });
+    console.log('\n[ROUTE LOG] =====================================');
+    console.log(`[ROUTE LOG] ${new Date().toISOString()}`);
+    console.log(`[ROUTE LOG] ${req.method} ${req.originalUrl}`);
     
     if (Object.keys(req.params).length > 0) {
-        console.log('URL Params:', req.params);
+        console.log('[ROUTE LOG] URL Params:', req.params);
     }
     
-    if (Object.keys(req.query).length > 0) {
-        console.log('Query Params:', req.query);
+    // Log only keys for body to avoid sensitive info
+    if (Object.keys(req.body).length > 0) {
+        console.log('[ROUTE LOG] Body Keys:', Object.keys(req.body));
     }
     
     if (req.files) {
-        console.log('Files:', Object.keys(req.files).map(key => ({
-            name: key,
-            originalName: req.files[key].name,
-            size: `${(req.files[key].size / 1024).toFixed(2)} KB`,
-            mimetype: req.files[key].mimetype
+        console.log('[ROUTE LOG] Files:', Object.keys(req.files).map(key => ({
+            fieldName: key,
+            fileName: req.files[key].name,
+            size: (req.files[key].size / 1024).toFixed(2) + 'KB'
         })));
     }
     
-    // Add response logging
-    const oldSend = res.send;
-    res.send = function(data) {
-        console.log(`[RESPONSE] ${res.statusCode}`);
-        // Execute the original function
-        oldSend.apply(res, arguments);
+    // Log the response status
+    const originalEnd = res.end;
+    res.end = function() {
+        console.log(`[ROUTE LOG] Response Status: ${res.statusCode}`);
+        console.log('[ROUTE LOG] =====================================\n');
+        originalEnd.apply(res, arguments);
     };
     
     next();

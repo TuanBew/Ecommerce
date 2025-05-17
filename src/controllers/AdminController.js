@@ -1,15 +1,14 @@
-const bcrypt = require('bcryptjs')
-const jwt = require('jsonwebtoken')
-const util = require('util')
-const path = require('path')
-const fs = require('fs')
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const util = require('util');
+const path = require('path');
+const fs = require('fs');
 
 // Connect to Database
-const db = require('../config/db/connect')
-const query = util.promisify(db.query).bind(db)
+const db = require('../config/db/connect');
+const query = util.promisify(db.query).bind(db);
 
 class AdminController {
-
   // INDEX
   index = async(req, res) => {
     try {
@@ -517,111 +516,135 @@ class AdminController {
     }
   }
 
-  // Edit product page
+  // Edit product page - Enhanced to include more data
   editProductPage = async (req, res) => {
     try {
-      const productId = req.params.id;
-      console.log(`[ADMIN] Loading edit product page for product ID: ${productId}`);
-      
-      // Get product info
-      console.log("[ADMIN] Fetching product data...");
-      const productQuery = `
-          SELECT p.*, c.category_name
-          FROM products p
-          LEFT JOIN categories c ON p.category_id = c.category_id
-          WHERE p.product_id = ?
-      `;
-      
-      const productResult = await query(productQuery, [productId]);
-      console.log(`[ADMIN] Product query completed, found ${productResult.length} results`);
-      
-      if (productResult.length === 0) {
-          console.log(`[ADMIN] Product not found with ID: ${productId}`);
-          return res.status(404).render('admin/pages/error', {
-              title: {
-                title: 'Lỗi - Không tìm thấy sản phẩm'
-              },
-              admin: req.admin,
-              user: req.admin,
-              message: 'Không tìm thấy sản phẩm với ID đã cung cấp.'
-          });
-      }
-      
-      const product = productResult[0];
-      console.log(`[ADMIN] Found product: ${product.product_name}`);
-      
-      // Get product variants
-      console.log("[ADMIN] Fetching product variants...");
-      const variantsQuery = `
-          SELECT * FROM product_variants
-          WHERE product_id = ?
-          ORDER BY product_variant_id
-      `;
-      
-      const variants = await query(variantsQuery, [productId]);
-      console.log(`[ADMIN] Found ${variants.length} variants for product`);
-      
-      // Get product images
-      console.log("[ADMIN] Fetching product images...");
-      const imagesQuery = `
-          SELECT * FROM product_imgs
-          WHERE product_id = ?
-          ORDER BY image_id
-      `;
-      
-      const images = await query(imagesQuery, [productId]);
-      console.log(`[ADMIN] Found ${images.length} images for product`);
-      
-      // Get product details (specifications)
-      console.log("[ADMIN] Fetching product specifications...");
-      const specsQuery = `
-          SELECT * FROM product_details
-          WHERE product_id = ?
-          ORDER BY product_detail_id
-      `;
-      
-      const specs = await query(specsQuery, [productId]);
-      console.log(`[ADMIN] Found ${specs.length} specifications for product`);
-      
-      // Get all categories for dropdown
-      console.log("[ADMIN] Fetching categories for dropdown...");
-      const categories = await query('SELECT * FROM categories ORDER BY category_name');
-      console.log(`[ADMIN] Found ${categories.length} categories`);
-      
-      console.log("[ADMIN] All data fetched, rendering product_edit_admin template");
-      console.log("[ADMIN] Rendering with data:", {
-          productId,
-          productName: product.product_name,
-          variantCount: variants.length,
-          imageCount: images.length,
-          specCount: specs.length,
-          categoryCount: categories.length
-      });
-      
-      res.render('admin/pages/product_edit_admin', {
-          title: {
-              title: 'Sửa thông tin sản phẩm'
-          },
-          admin: req.admin,
-          user: req.admin,
-          product,
-          variants,
-          images,
-          specs,
-          categories
-      });
-      console.log("[ADMIN] Edit product page rendered successfully");
+        const productId = req.params.id;
+        console.log(`[ADMIN] Loading edit product page for product ID: ${productId}`);
+        
+        // Get product info
+        console.log("[ADMIN] Fetching product data...");
+        const productQuery = `
+            SELECT p.*, c.category_name
+            FROM products p
+            LEFT JOIN categories c ON p.category_id = c.category_id
+            WHERE p.product_id = ?
+        `;
+        
+        const productResult = await query(productQuery, [productId]);
+        console.log(`[ADMIN] Product query completed, found ${productResult.length} results`);
+        
+        if (productResult.length === 0) {
+            console.log(`[ADMIN] Product not found with ID: ${productId}`);
+            return res.status(404).render('admin/pages/error', {
+                title: {
+                  title: 'Lỗi - Không tìm thấy sản phẩm'
+                },
+                admin: req.admin,
+                user: req.admin,
+                message: 'Không tìm thấy sản phẩm với ID đã cung cấp.'
+            });
+        }
+        
+        const product = productResult[0];
+        console.log(`[ADMIN] Found product: ${product.product_name}`);
+        
+        // Get product variants
+        console.log("[ADMIN] Fetching product variants...");
+        const variantsQuery = `
+            SELECT pv.*, d.discount_name, d.discount_amount
+            FROM product_variants pv
+            LEFT JOIN discounts d ON pv.discount_id = d.discount_id
+            WHERE pv.product_id = ?
+            ORDER BY pv.product_variant_id
+        `;
+        
+        const variants = await query(variantsQuery, [productId]);
+        console.log(`[ADMIN] Found ${variants.length} variants for product`);
+        
+        // Get product images
+        console.log("[ADMIN] Fetching product images...");
+        const imagesQuery = `
+            SELECT * FROM product_imgs
+            WHERE product_id = ?
+            ORDER BY image_id
+        `;
+        
+        const images = await query(imagesQuery, [productId]);
+        console.log(`[ADMIN] Found ${images.length} images for product`);
+        
+        // Get product details (specifications)
+        console.log("[ADMIN] Fetching product specifications...");
+        const specsQuery = `
+            SELECT * FROM product_details
+            WHERE product_id = ?
+            ORDER BY product_detail_id
+        `;
+        
+        const specs = await query(specsQuery, [productId]);
+        console.log(`[ADMIN] Found ${specs.length} specifications for product`);
+        
+        // Get all categories for dropdown
+        console.log("[ADMIN] Fetching categories for dropdown...");
+        const categories = await query('SELECT * FROM categories ORDER BY category_name');
+        console.log(`[ADMIN] Found ${categories.length} categories`);
+        
+        // Get all suppliers for dropdown
+        console.log("[ADMIN] Fetching suppliers for dropdown...");
+        const suppliers = await query('SELECT * FROM suppliers ORDER BY supplier_name');
+        console.log(`[ADMIN] Found ${suppliers.length} suppliers`);
+        
+        // Get all discounts for dropdown
+        console.log("[ADMIN] Fetching discounts for dropdown...");
+        const discounts = await query('SELECT * FROM discounts WHERE discount_is_display = 1 ORDER BY discount_name');
+        console.log(`[ADMIN] Found ${discounts.length} active discounts`);
+        
+        // Ensure product_avt_img is set to the first image if it's null
+        if (!product.product_avt_img && images.length > 0) {
+            product.product_avt_img = images[0].image_name;
+            await query('UPDATE products SET product_avt_img = ? WHERE product_id = ?', [product.product_avt_img, productId]);
+            console.log(`[ADMIN] Updated product avatar image to: ${product.product_avt_img}`);
+        }
+        
+        // Render template with all data
+        console.log("[ADMIN] All data fetched, rendering product_edit_admin template");
+        console.log("[ADMIN] Rendering with data:", {
+            productId,
+            productName: product.product_name,
+            variantCount: variants.length,
+            imageCount: images.length,
+            specCount: specs.length,
+            categoryCount: categories.length,
+            supplierCount: suppliers.length,
+            discountCount: discounts.length
+        });
+        
+        res.render('admin/pages/product_edit_admin', {
+            title: {
+                title: 'Sửa thông tin sản phẩm'
+            },
+            admin: req.admin,
+            user: req.admin,
+            product,
+            variants,
+            images,
+            specs,
+            categories,
+            suppliers,
+            discounts
+        });
+        console.log("[ADMIN] Edit product page rendered successfully");
     } catch (error) {
-      console.error("[ADMIN] Error loading edit product page:", error);
-      console.error("[ADMIN] Error stack:", error.stack);
-      res.status(500).render('admin/pages/error', {
-        title: {
-          title: 'Lỗi hệ thống'
-        },
-        user: req.admin,
-        message: 'Đã xảy ra lỗi khi tải trang sửa sản phẩm',
-        errorDetails: process.env.NODE_ENV !== 'production' ? error.stack : null
-      });
+        console.error("[ADMIN] Error loading edit product page:", error);
+        console.error("[ADMIN] Error stack:", error.stack);
+        res.status(500).render('admin/pages/error', {
+            title: {
+                title: 'Lỗi hệ thống'
+            },
+            user: req.admin,
+            message: 'Đã xảy ra lỗi khi tải trang sửa sản phẩm',
+            errorDetails: process.env.NODE_ENV !== 'production' ? error.stack : null
+        });
     }
   }
 
@@ -754,328 +777,445 @@ class AdminController {
         productId: productId
       });
     } catch (error) {
-      // Rollback transaction on error
-      await query('ROLLBACK');
       console.error('[ADMIN] Error adding product:', error);
-      console.error('[ADMIN] Error stack:', error.stack);
       res.status(500).json({
         status: 'error',
         message: 'Đã có lỗi xảy ra khi thêm sản phẩm'
       });
     }
   }
-  
-  // API to update a product
+
+  // Update Product implementation
   updateProduct = async (req, res) => {
-    console.log("\n--------------------------------------------------");
-    console.log("[ADMIN] Update product API called at:", new Date().toISOString());
-    console.log("[ADMIN] Request URL:", req.originalUrl);
-    console.log("[ADMIN] Product ID from params:", req.params.id);
-    console.log("[ADMIN] Product ID from body:", req.body.product_id);
-    console.log("[ADMIN] Request method:", req.method);
-    console.log("[ADMIN] Request headers:", {
-      'content-type': req.headers['content-type'],
-      'content-length': req.headers['content-length'],
-    });
-    console.log("[ADMIN] Files received:", req.files ? Object.keys(req.files).length + " files" : 'No files');
-    if (req.files) {
-      Object.keys(req.files).forEach(key => {
-        console.log(`[ADMIN] - File ${key}:`, {
-          name: req.files[key].name,
-          size: Math.round(req.files[key].size / 1024) + "KB",
-          mimetype: req.files[key].mimetype
+    console.log("\n[PRODUCT UPDATE] ==============================================");
+    console.log("[PRODUCT UPDATE] Start processing update request");
+    console.log("[PRODUCT UPDATE] Request URL:", req.originalUrl);
+    console.log("[PRODUCT UPDATE] Product ID from params:", req.params.id);
+    console.log("[PRODUCT UPDATE] Product ID from body:", req.body.product_id);
+    
+    // Parse changed fields for efficient updates
+    let changedFields = [];
+    try {
+        if (req.body.changed_fields) {
+            changedFields = JSON.parse(req.body.changed_fields);
+            console.log("[PRODUCT UPDATE] Changed fields:", changedFields);
+        }
+    } catch (e) {
+        console.error("[PRODUCT UPDATE] Error parsing changed fields:", e);
+    }
+    
+    // Check if there are no changes
+    const hasChanges = changedFields.length > 0 || 
+                      (req.files && Object.keys(req.files).length > 0) || 
+                      req.body.delete_images;
+                      
+    if (!hasChanges) {
+        console.log("[PRODUCT UPDATE] No changes detected, returning early");
+        return res.status(200).json({
+            status: 'success',
+            message: 'No changes detected'
         });
-      });
     }
     
     try {
-        // Start transaction
-        await query('START TRANSACTION');
-        console.log("[ADMIN] Transaction started");
+        // Get product ID from params or body
+        const productId = req.params.id || req.body.product_id;
         
-        const product_id = req.params.id || req.body.product_id;
-        
-        if (!product_id) {
-            console.error("[ADMIN] Missing product ID in both params and body");
-            await query('ROLLBACK');
+        if (!productId) {
+            console.error("[PRODUCT UPDATE] Error: Missing product ID");
             return res.status(400).json({
                 status: 'error',
                 message: 'Missing product ID'
             });
         }
         
-        console.log("[ADMIN] Using product ID:", product_id);
+        // Extract product data from form
+        const { 
+            product_name, 
+            category_id, 
+            supplier_id,
+            product_description, 
+            product_period 
+        } = req.body;
         
-        const { product_name, category_id, product_description } = req.body;
         const product_is_display = req.body.product_is_display ? 1 : 0;
+        const product_is_bestseller = req.body.product_is_bestseller ? 1 : 0;
         
-        // Debug info
-        console.log("[ADMIN] Form data:", {
-            product_id,
+        console.log("[PRODUCT UPDATE] Basic product data:", {
+            productId,
             product_name,
             category_id,
-            product_description: product_description ? product_description.substring(0, 20) + '...' : 'Empty',
-            display: req.body.product_is_display ? 'Yes' : 'No',
-            delete_images: req.body.delete_images || 'None'
+            supplier_id,
+            product_is_bestseller,
+            product_is_display,
+            product_period
         });
         
-        // Validate
-        if (!product_id || !product_name || !category_id) {
-            console.error("[ADMIN] Missing required fields");
-            await query('ROLLBACK');
+        // Validate required fields
+        if (!product_name || !category_id) {
+            console.error("[PRODUCT UPDATE] Error: Missing required fields");
             return res.status(400).json({
                 status: 'error',
-                message: 'Thiếu thông tin sản phẩm'
+                message: 'Product name and category are required'
             });
         }
         
-        // Check if product exists
-        const productCheck = await query('SELECT * FROM products WHERE product_id = ?', [product_id]);
-        if (productCheck.length === 0) {
-            console.error(`[ADMIN] Product with ID ${product_id} not found`);
-            await query('ROLLBACK');
-            return res.status(404).json({
-                status: 'error',
-                message: 'Sản phẩm không tồn tại'
-            });
+        // Begin database transaction
+        await query('START TRANSACTION');
+        
+        // Update the product's basic information - only if fields have changed
+        const productFieldsToUpdate = [];
+        const productParamsToUpdate = [];
+        
+        if (changedFields.includes('product_name')) {
+            productFieldsToUpdate.push('product_name = ?');
+            productParamsToUpdate.push(product_name);
         }
         
-        console.log(`[ADMIN] Found product: ${productCheck[0].product_name}`);
+        if (changedFields.includes('category_id')) {
+            productFieldsToUpdate.push('category_id = ?');
+            productParamsToUpdate.push(category_id);
+        }
         
-        // Check if product_is_bestseller column exists
-        const columnsResult = await query(`
-            SELECT COLUMN_NAME 
-            FROM INFORMATION_SCHEMA.COLUMNS 
-            WHERE TABLE_SCHEMA = DATABASE() 
-            AND TABLE_NAME = 'products' 
-            AND COLUMN_NAME = 'product_is_bestseller'
-        `);
+        if (changedFields.includes('supplier_id')) {
+            productFieldsToUpdate.push('supplier_id = ?');
+            productParamsToUpdate.push(supplier_id || null);
+        }
         
-        // Update product info based on column existence
-        if (columnsResult.length > 0) {
-            // Column exists, include it in the update
-            const product_is_bestseller = req.body.product_is_bestseller ? 1 : 0;
-            console.log("[ADMIN] Updating product with bestseller flag");
-            await query(
-                'UPDATE products SET product_name = ?, category_id = ?, product_description = ?, product_is_bestseller = ?, product_is_display = ? WHERE product_id = ?',
-                [product_name, category_id, product_description, product_is_bestseller, product_is_display, product_id]
-            );
+        if (changedFields.includes('product_description')) {
+            productFieldsToUpdate.push('product_description = ?');
+            productParamsToUpdate.push(product_description);
+        }
+        
+        if (changedFields.includes('product_is_bestseller')) {
+            productFieldsToUpdate.push('product_is_bestseller = ?');
+            productParamsToUpdate.push(product_is_bestseller);
+        }
+        
+        if (changedFields.includes('product_is_display')) {
+            productFieldsToUpdate.push('product_is_display = ?');
+            productParamsToUpdate.push(product_is_display);
+        }
+        
+        if (changedFields.includes('product_period')) {
+            productFieldsToUpdate.push('product_period = ?');
+            productParamsToUpdate.push(product_period || 12);
+        }
+        
+        // Only update product if there are changes
+        if (productFieldsToUpdate.length > 0) {
+            productParamsToUpdate.push(productId);
+            const updateProductQuery = `UPDATE products SET ${productFieldsToUpdate.join(', ')} WHERE product_id = ?`;
+            
+            const updateProductResult = await query(updateProductQuery, productParamsToUpdate);
+            console.log(`[PRODUCT UPDATE] Updated basic product info, affected rows: ${updateProductResult.affectedRows}`);
         } else {
-            // Column doesn't exist, exclude it from the update
-            console.log("[ADMIN] Updating product without bestseller flag");
-            await query(
-                'UPDATE products SET product_name = ?, category_id = ?, product_description = ?, product_is_display = ? WHERE product_id = ?',
-                [product_name, category_id, product_description, product_is_display, product_id]
-            );
+            console.log(`[PRODUCT UPDATE] No changes to basic product info`);
         }
         
-        console.log("[ADMIN] Basic product info updated");
+        // Process variants
+        const variantData = {};
+        let variantFieldPattern = /variants\[(\d+)\]\[([^\]]+)\]/;
+        
+        for (const key in req.body) {
+            const matches = key.match(variantFieldPattern);
+            if (matches) {
+                const [_, index, field] = matches;
+                if (!variantData[index]) variantData[index] = {};
+                variantData[index][field] = req.body[key];
+            }
+        }
+        
+        // Process variants (create, update, delete)
+        console.log(`[PRODUCT UPDATE] Processing ${Object.keys(variantData).length} variants`);
+        
+        for (const index in variantData) {
+            const variant = variantData[index];
+            const variantId = variant.id;
+            const variantName = variant.name;
+            const variantPrice = variant.price;
+            const variantStock = variant.stock || 0;
+            const variantDiscountId = variant.discount_id || null;
+            const variantIsBestseller = variant.is_bestseller ? 1 : 0;
+            const variantIsStock = variant.is_stock ? 1 : 0;
+            const variantIsDisplay = variant.is_display ? 1 : 0;
+            
+            if (!variantName || !variantPrice) {
+                console.log(`[PRODUCT UPDATE] Skipping variant with missing required fields`);
+                continue;
+            }
+            
+            if (variantId) {
+                // Update existing variant
+                await query(
+                    `UPDATE product_variants SET 
+                     product_variant_name = ?, 
+                     product_variant_price = ?, 
+                     product_variant_available = ?,
+                     discount_id = ?,
+                     product_variant_is_bestseller = ?,
+                     product_variant_is_stock = ?,
+                     product_variant_is_display = ?
+                     WHERE product_variant_id = ?`,
+                    [
+                        variantName, 
+                        variantPrice, 
+                        variantStock, 
+                        variantDiscountId,
+                        variantIsBestseller,
+                        variantIsStock,
+                        variantIsDisplay,
+                        variantId
+                    ]
+                );
+                console.log(`[PRODUCT UPDATE] Updated variant #${variantId}: ${variantName} - ${variantPrice}`);
+            } else if (variantName && variantPrice) {
+                // Create new variant
+                const result = await query(
+                    `INSERT INTO product_variants 
+                     (product_id, product_variant_name, product_variant_price, product_variant_available, 
+                      discount_id, product_variant_is_bestseller, product_variant_is_stock, 
+                      product_variant_is_display, product_variant_added_date) 
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+                    [
+                        productId, 
+                        variantName, 
+                        variantPrice, 
+                        variantStock,
+                        variantDiscountId,
+                        variantIsBestseller,
+                        variantIsStock,
+                        variantIsDisplay
+                    ]
+                );
+                console.log(`[PRODUCT UPDATE] Created new variant #${result.insertId}: ${variantName} - ${variantPrice}`);
+            }
+        }
+        
+        // Check for variants to delete (by comparing existing with submitted)
+        const existingVariantsResult = await query(
+            'SELECT product_variant_id FROM product_variants WHERE product_id = ?', 
+            [productId]
+        );
+        
+        if (existingVariantsResult.length > 0) {
+            const existingVariantIds = existingVariantsResult.map(v => v.product_variant_id.toString());
+            const submittedVariantIds = Object.values(variantData)
+                                            .filter(v => v.id)
+                                            .map(v => v.id.toString());
+            
+            const variantsToDelete = existingVariantIds.filter(id => !submittedVariantIds.includes(id));
+            
+            if (variantsToDelete.length > 0) {
+                await query('DELETE FROM product_variants WHERE product_variant_id IN (?)', [variantsToDelete]);
+                console.log(`[PRODUCT UPDATE] Deleted ${variantsToDelete.length} variants: ${variantsToDelete.join(', ')}`);
+            }
+        }
         
         // Process specifications
-        console.log("[ADMIN] Processing specifications...");
+        const specData = {};
+        let specFieldPattern = /specs\[(\d+)\]\[([^\]]+)\]/;
         
-        // Get all form fields to extract specs
-        const formKeys = Object.keys(req.body);
-        const specKeys = formKeys.filter(key => key.startsWith('specs[') && key.includes('][name]'));
-        
-        // Extract specs data
-        const specs = [];
-        for (const key of specKeys) {
-            const index = key.match(/specs\[(\d+)\]/)[1];
-            const nameKey = `specs[${index}][name]`;
-            const valueKey = `specs[${index}][value]`;
-            const idKey = `specs[${index}][id]`;
-            
-            const name = req.body[nameKey];
-            const value = req.body[valueKey];
-            const id = req.body[idKey];
-            
-            if (name && value) {
-                specs.push({ id, name, value, index });
+        for (const key in req.body) {
+            const matches = key.match(specFieldPattern);
+            if (matches) {
+                const [_, index, field] = matches;
+                if (!specData[index]) specData[index] = {};
+                specData[index][field] = req.body[key];
             }
         }
         
-        console.log(`[ADMIN] Found ${specs.length} specifications in form`);
+        // Process specs (create, update, delete)
+        console.log(`[PRODUCT UPDATE] Processing ${Object.keys(specData).length} specifications`);
         
-        // Get existing specs from database
-        const existingSpecs = await query('SELECT product_detail_id FROM product_details WHERE product_id = ?', [product_id]);
-        const existingSpecIds = existingSpecs.map(s => s.product_detail_id.toString());
-        
-        console.log(`[ADMIN] Found ${existingSpecIds.length} existing specifications in database`);
-        
-        // Track which specs to keep
-        const specIdsToKeep = [];
-        
-        // Process each spec
-        for (const spec of specs) {
-            if (spec.id && existingSpecIds.includes(spec.id.toString())) {
-                // Update existing spec
-                console.log(`[ADMIN] Updating specification ID ${spec.id}: ${spec.name} = ${spec.value}`);
+        for (const index in specData) {
+            const spec = specData[index];
+            const specId = spec.id;
+            const specName = spec.name;
+            const specValue = spec.value;
+            const specUnit = spec.unit || null;
+            
+            if (!specName || !specValue) continue;
+            
+            if (specId) {
+                // Update existing specification
                 await query(
-                    'UPDATE product_details SET product_detail_name = ?, product_detail_value = ? WHERE product_detail_id = ? AND product_id = ?',
-                    [spec.name, spec.value, spec.id, product_id]
+                    'UPDATE product_details SET product_detail_name = ?, product_detail_value = ?, product_detail_unit = ? WHERE product_detail_id = ?',
+                    [specName, specValue, specUnit, specId]
                 );
-                specIdsToKeep.push(spec.id.toString());
+                console.log(`[PRODUCT UPDATE] Updated specification #${specId}: ${specName} = ${specValue}`);
             } else {
-                // Insert new spec
-                console.log(`[ADMIN] Adding new specification: ${spec.name} = ${spec.value}`);
+                // Create new specification
                 const result = await query(
-                    'INSERT INTO product_details (product_id, product_detail_name, product_detail_value) VALUES (?, ?, ?)',
-                    [product_id, spec.name, spec.value]
+                    'INSERT INTO product_details (product_id, product_detail_name, product_detail_value, product_detail_unit) VALUES (?, ?, ?, ?)',
+                    [productId, specName, specValue, specUnit]
                 );
-                specIdsToKeep.push(result.insertId.toString());
+                console.log(`[PRODUCT UPDATE] Created new specification #${result.insertId}: ${specName} = ${specValue}`);
             }
         }
         
-        // Delete specs that weren't in the form
-        const specIdsToDelete = existingSpecIds.filter(id => !specIdsToKeep.includes(id));
+        // Check for specs to delete
+        const existingSpecsResult = await query(
+            'SELECT product_detail_id FROM product_details WHERE product_id = ?', 
+            [productId]
+        );
         
-        if (specIdsToDelete.length > 0) {
-            console.log(`[ADMIN] Deleting specifications with IDs: ${specIdsToDelete.join(', ')}`);
-            await query(
-                'DELETE FROM product_details WHERE product_detail_id IN (?) AND product_id = ?',
-                [specIdsToDelete, product_id]
-            );
+        if (existingSpecsResult.length > 0) {
+            const existingSpecIds = existingSpecsResult.map(s => s.product_detail_id.toString());
+            const submittedSpecIds = Object.values(specData)
+                                        .filter(s => s.id)
+                                        .map(s => s.id.toString());
+            
+            const specsToDelete = existingSpecIds.filter(id => !submittedSpecIds.includes(id));
+            
+            if (specsToDelete.length > 0) {
+                await query('DELETE FROM product_details WHERE product_detail_id IN (?)', [specsToDelete]);
+                console.log(`[PRODUCT UPDATE] Deleted ${specsToDelete.length} specifications: ${specsToDelete.join(', ')}`);
+            }
         }
         
         // Handle image deletions
-        console.log("[ADMIN] Processing image deletions...");
-        const deleteImages = req.body.delete_images ? 
-            (Array.isArray(req.body.delete_images) ? req.body.delete_images : [req.body.delete_images]) : [];
-        
-        console.log("[ADMIN] Images to delete:", deleteImages);
-        
-        if (deleteImages.length > 0) {
-            // Get filenames to delete files
-            for (const imageId of deleteImages) {
-                console.log(`[ADMIN] Deleting image ID: ${imageId}`);
+        if (req.body.delete_images) {
+            const imagesToDelete = Array.isArray(req.body.delete_images) 
+                ? req.body.delete_images 
+                : [req.body.delete_images];
+            
+            console.log(`[PRODUCT UPDATE] Processing ${imagesToDelete.length} images for deletion`);
+            
+            for (const imageId of imagesToDelete) {
+                // Get image filename before deleting the record
+                const imageResult = await query(
+                    'SELECT image_name FROM product_imgs WHERE image_id = ? AND product_id = ?', 
+                    [imageId, productId]
+                );
                 
-                const image = await query('SELECT image_name FROM product_imgs WHERE image_id = ? AND product_id = ?', [imageId, product_id]);
-                
-                if (image.length > 0) {
-                    const imageName = image[0].image_name;
-                    console.log(`[ADMIN] Found image with name: ${imageName}`);
+                if (imageResult.length > 0) {
+                    const imageName = imageResult[0].image_name;
+                    const imagePath = path.join(__dirname, '../public/imgs/product_image/P' + productId, imageName);
                     
-                    // Delete file from server
-                    const imagePath = path.join(__dirname, '../public/imgs/product_image/P' + product_id, imageName);
-                    console.log(`[ADMIN] Deleting file at path: ${imagePath}`);
-                    
-                    if (fs.existsSync(imagePath)) {
-                        fs.unlinkSync(imagePath);
-                        console.log(`[ADMIN] File deleted successfully`);
-                    } else {
-                        console.log(`[ADMIN] File not found at path: ${imagePath}`);
+                    // Delete the file if it exists
+                    try {
+                        if (fs.existsSync(imagePath)) {
+                            fs.unlinkSync(imagePath);
+                            console.log(`[PRODUCT UPDATE] Deleted image file: ${imagePath}`);
+                        }
+                    } catch (err) {
+                        console.error(`[PRODUCT UPDATE] Error deleting image file: ${err.message}`);
                     }
                     
-                    // Delete from database
+                    // Delete the database record
                     await query('DELETE FROM product_imgs WHERE image_id = ?', [imageId]);
-                    console.log(`[ADMIN] Image deleted from database`);
-                } else {
-                    console.log(`[ADMIN] Image with ID ${imageId} not found in database`);
+                    console.log(`[PRODUCT UPDATE] Deleted image record #${imageId}`);
                 }
             }
         }
         
         // Handle new image uploads
-        console.log("[ADMIN] Processing new image uploads...");
         if (req.files) {
-            console.log("[ADMIN] Files received:", Object.keys(req.files));
-            
-            // Get all files that start with "new_image_"
             const newImageKeys = Object.keys(req.files).filter(key => key.startsWith('new_image_'));
             
-            console.log("[ADMIN] New image keys:", newImageKeys);
-            
             if (newImageKeys.length > 0) {
-                // Ensure product image directory exists
-                const productImageDir = path.join(__dirname, '../public/imgs/product_image/P' + product_id);
-                console.log(`[ADMIN] Product image directory: ${productImageDir}`);
+                console.log(`[PRODUCT UPDATE] Processing ${newImageKeys.length} new image uploads`);
                 
-                if (!fs.existsSync(productImageDir)) {
-                    console.log(`[ADMIN] Creating directory: ${productImageDir}`);
-                    fs.mkdirSync(productImageDir, { recursive: true });
+                // Ensure product image directory exists
+                const productImgDir = path.join(__dirname, '../public/imgs/product_image/P' + productId);
+                if (!fs.existsSync(productImgDir)) {
+                    fs.mkdirSync(productImgDir, { recursive: true });
+                    console.log(`[PRODUCT UPDATE] Created product image directory: ${productImgDir}`);
                 }
-
-                // Get the current highest image number for this product
-                let currentCount = 0;
-                try {
-                    const existingImages = await query('SELECT image_name FROM product_imgs WHERE product_id = ?', [product_id]);
-                    if (existingImages.length > 0) {
-                        // Extract numbers from filenames like P1_1.jpg, P1_2.jpg, etc.
-                        const pattern = new RegExp(`P${product_id}_(\\d+)\\.`);
-                        const numbers = existingImages
-                            .map(img => {
-                                const match = img.image_name.match(pattern);
-                                return match ? parseInt(match[1]) : 0;
-                            })
-                            .filter(num => !isNaN(num));
-                        
-                        if (numbers.length > 0) {
-                            currentCount = Math.max(...numbers);
+                
+                // Find highest current image number
+                const existingImages = await query('SELECT image_name FROM product_imgs WHERE product_id = ?', [productId]);
+                let highestNumber = 0;
+                
+                existingImages.forEach(img => {
+                    const match = img.image_name.match(/P\d+_(\d+)\./);
+                    if (match && match[1]) {
+                        const num = parseInt(match[1]);
+                        if (!isNaN(num) && num > highestNumber) {
+                            highestNumber = num;
                         }
                     }
-                    console.log(`[ADMIN] Current highest image number: ${currentCount}`);
-                } catch (err) {
-                    console.error(`[ADMIN] Error getting current image count: ${err.message}`);
-                }
+                });
                 
-                // Process each new image with proper naming
+                console.log(`[PRODUCT UPDATE] Highest existing image number: ${highestNumber}`);
+                
+                // Process each new image
                 for (const key of newImageKeys) {
-                    const image = req.files[key];
-                    console.log(`[ADMIN] Processing image: ${key}, original name: ${image.name}`);
+                    const imageFile = req.files[key];
                     
-                    if (!image.name) {
-                        console.log(`[ADMIN] Skipping ${key} because it has no name`);
+                    // Skip empty files
+                    if (!imageFile || !imageFile.name || imageFile.size === 0) {
+                        console.log(`[PRODUCT UPDATE] Skipping empty file for key: ${key}`);
                         continue;
                     }
                     
-                    const extension = image.name.split('.').pop().toLowerCase();
-                    currentCount++; // Increment the counter for each new image
+                    // Generate a filename with sequential numbering
+                    highestNumber++;
+                    const fileExt = imageFile.name.split('.').pop().toLowerCase();
+                    const fileName = `P${productId}_${highestNumber}.${fileExt}`;
+                    const filePath = path.join(productImgDir, fileName);
                     
-                    // Use proper naming convention: P{product_id}_{sequence_number}.{extension}
-                    const fileName = `P${product_id}_${currentCount}.${extension}`;
-                    
-                    // Move file to product's directory
-                    const uploadPath = path.join(productImageDir, fileName);
-                    console.log(`[ADMIN] Moving file to: ${uploadPath}`);
+                    console.log(`[PRODUCT UPDATE] Saving new image: ${fileName}`);
                     
                     try {
-                        await image.mv(uploadPath);
-                        console.log('[ADMIN] File moved successfully');
+                        // Move the uploaded file
+                        await imageFile.mv(filePath);
                         
-                        // Insert into database
-                        const imageInsertResult = await query(
-                            'INSERT INTO product_imgs (product_id, image_name) VALUES (?, ?)', 
-                            [product_id, fileName]
+                        // Add to database
+                        const result = await query(
+                            'INSERT INTO product_imgs (product_id, image_name, image_is_display) VALUES (?, ?, 1)',
+                            [productId, fileName]
                         );
-                        console.log(`[ADMIN] Image entry created in database with ID: ${imageInsertResult.insertId}`);
+                        console.log(`[PRODUCT UPDATE] Saved new image with ID ${result.insertId}: ${fileName}`);
                     } catch (err) {
-                        console.error(`[ADMIN] Error uploading image: ${err.message}`);
-                        console.error(err.stack);
-                        // Continue with other images even if one fails
+                        console.error(`[PRODUCT UPDATE] Error saving image: ${err.message}`);
                     }
                 }
             }
         }
         
-        // Commit transaction
+        // Handle avatar image (first image)
+        if (changedFields.includes('avatar_changed')) {
+            console.log(`[PRODUCT UPDATE] Avatar image has been changed`);
+            
+            // Get all current images
+            const images = await query('SELECT image_id, image_name FROM product_imgs WHERE product_id = ? ORDER BY image_id ASC', [productId]);
+            
+            if (images.length > 0) {
+                // Update product's avatar image to be the first image
+                const avatarImage = images[0].image_name;
+                await query('UPDATE products SET product_avt_img = ? WHERE product_id = ?', [avatarImage, productId]);
+                console.log(`[PRODUCT UPDATE] Updated product avatar image to: ${avatarImage}`);
+            }
+        }
+        
+        // Commit the transaction
         await query('COMMIT');
-        console.log("[ADMIN] Transaction committed - Product update successful");
-        res.status(200).json({
+        
+        console.log("[PRODUCT UPDATE] Update completed successfully");
+        return res.status(200).json({
             status: 'success',
-            message: 'Cập nhật sản phẩm thành công'
+            message: 'Product updated successfully'
         });
     } catch (error) {
+        console.error("[PRODUCT UPDATE] Error:", error);
+        
         // Rollback transaction on error
-        await query('ROLLBACK');
-        console.error('[ADMIN] Error updating product:', error);
-        console.error('[ADMIN] Error stack:', error.stack);
-        res.status(500).json({
+        try {
+            await query('ROLLBACK');
+            console.log("[PRODUCT UPDATE] Transaction rolled back");
+        } catch (rollbackError) {
+            console.error("[PRODUCT UPDATE] Rollback error:", rollbackError);
+        }
+        
+        return res.status(500).json({
             status: 'error',
-            message: 'Đã có lỗi xảy ra khi cập nhật sản phẩm: ' + error.message
+            message: 'An error occurred while updating the product: ' + error.message
         });
+    } finally {
+        console.log("[PRODUCT UPDATE] ==============================================\n");
     }
-    console.log("--------------------------------------------------\n");
   }
 
   // Delete product
@@ -1104,193 +1244,153 @@ class AdminController {
         });
       }
       
-      // Check if product is in any orders
-      const variants = await query('SELECT product_variant_id FROM product_variants WHERE product_id = ?', [productId]);
-      const variantIds = variants.map(v => v.product_variant_id);
+      // Check if product is used in orders
+      const ordersWithProduct = await query(
+        'SELECT COUNT(*) as count FROM order_details WHERE product_id = ?', 
+        [productId]
+      );
       
-      if (variantIds.length > 0) {
-        const orders = await query('SELECT COUNT(*) as count FROM order_details WHERE product_variant_id IN (?)', [variantIds]);
-        if (orders[0].count > 0) {
-          await query('ROLLBACK');
-          return res.status(400).json({
-            status: 'error',
-            message: 'Cannot delete product that is in orders'
-          });
-        }
+      if (ordersWithProduct[0].count > 0) {
+        await query('ROLLBACK');
+        return res.status(400).json({
+          status: 'error',
+          message: 'Cannot delete product that is used in orders'
+        });
       }
       
-      // Get product images to delete files
-      const images = await query('SELECT * FROM product_imgs WHERE product_id = ?', [productId]);
-      
-      // Delete image files
-      for (const image of images) {
-        const imagePath = path.join(__dirname, '../public/imgs/product_image/P' + productId, image.image_name);
-        if (fs.existsSync(imagePath)) {
-          fs.unlinkSync(imagePath);
-        }
-      }
-      
-      // Delete product directory if exists
+      // Delete product files and data
       const productDir = path.join(__dirname, '../public/imgs/product_image/P' + productId);
+      
       if (fs.existsSync(productDir)) {
         fs.rmdirSync(productDir, { recursive: true });
       }
       
-      // Delete from database
       await query('DELETE FROM product_variants WHERE product_id = ?', [productId]);
       await query('DELETE FROM product_details WHERE product_id = ?', [productId]);
       await query('DELETE FROM product_imgs WHERE product_id = ?', [productId]);
       await query('DELETE FROM products WHERE product_id = ?', [productId]);
       
-      // Commit transaction
       await query('COMMIT');
       
-      res.status(200).json({
+      return res.status(200).json({
         status: 'success',
         message: 'Product deleted successfully'
       });
     } catch (error) {
-      await query('ROLLBACK');
       console.error('Error deleting product:', error);
-      res.status(500).json({
+      
+      try {
+        await query('ROLLBACK');
+      } catch (rollbackError) {
+        console.error('Rollback error:', rollbackError);
+      }
+      
+      return res.status(500).json({
         status: 'error',
         message: 'An error occurred while deleting the product'
       });
     }
   }
-
+  
   // Add a new API method for bulk deletion
   bulkDeleteProducts = async (req, res) => {
     try {
-        const { productIds } = req.body;
-        
-        if (!productIds || !Array.isArray(productIds) || productIds.length === 0) {
-            return res.status(400).json({
-                status: 'error',
-                message: 'Không có sản phẩm được chọn để xóa'
-            });
-        }
-        
-        // Start transaction
-        await query('START TRANSACTION');
-        
-        // For each product, check if it's in orders
-        const checkOrdersPromises = productIds.map(async (id) => {
-            const variants = await query('SELECT product_variant_id FROM product_variants WHERE product_id = ?', [id]);
-            const variantIds = variants.map(v => v.product_variant_id);
-            
-            if (variantIds.length > 0) {
-                const orders = await query('SELECT COUNT(*) as count FROM order_details WHERE product_variant_id IN (?)', [variantIds]);
-                return {
-                    productId: id,
-                    inOrders: orders[0].count > 0
-                };
-            }
-            
-            return { productId: id, inOrders: false };
+      const { productIds } = req.body;
+      
+      if (!productIds || !Array.isArray(productIds) || productIds.length === 0) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'No products selected for deletion'
         });
+      }
+      
+      // Start transaction
+      await query('START TRANSACTION');
+      
+      // Check which products are in orders
+      const productsInOrders = await query(
+        'SELECT DISTINCT product_id FROM order_details WHERE product_id IN (?)',
+        [productIds]
+      );
+      
+      const productsInOrderIds = productsInOrders.map(p => p.product_id);
+      const productsToDelete = productIds.filter(id => !productsInOrderIds.includes(parseInt(id)));
+      
+      console.log(`Products to delete: ${productsToDelete.join(', ')}`);
+      console.log(`Products in orders (cannot delete): ${productsInOrderIds.join(', ')}`);
+      
+      // Delete products that are not in any orders
+      for (const productId of productsToDelete) {
+        const productDir = path.join(__dirname, '../public/imgs/product_image/P' + productId);
         
-        const checkResults = await Promise.all(checkOrdersPromises);
-        const productsToDelete = checkResults.filter(r => !r.inOrders).map(r => r.productId);
-        const productsInOrders = checkResults.filter(r => r.inOrders).map(r => r.productId);
-        
-        // Delete products that aren't in orders
-        if (productsToDelete.length > 0) {
-            // Delete product files first
-            for (const productId of productsToDelete) {
-                // Get images
-                const images = await query('SELECT * FROM product_imgs WHERE product_id = ?', [productId]);
-                
-                // Delete image files
-                for (const image of images) {
-                    const imagePath = path.join(__dirname, '../public/imgs/product_image/P' + productId, image.image_name);
-                    if (fs.existsSync(imagePath)) {
-                        fs.unlinkSync(imagePath);
-                    }
-                }
-                
-                // Delete product directory if exists
-                const productDir = path.join(__dirname, '../public/imgs/product_image/P' + productId);
-                if (fs.existsSync(productDir)) {
-                    fs.rmdirSync(productDir, { recursive: true });
-                }
-                
-                // Delete from database
-                // Delete product variants
-                await query('DELETE FROM product_variants WHERE product_id = ?', [productId]);
-                
-                // Delete product details
-                await query('DELETE FROM product_details WHERE product_id = ?', [productId]);
-                
-                // Delete product images
-                await query('DELETE FROM product_imgs WHERE product_id = ?', [productId]);
-                
-                // Delete the product
-                await query('DELETE FROM products WHERE product_id = ?', [productId]);
-            }
+        if (fs.existsSync(productDir)) {
+          fs.rmdirSync(productDir, { recursive: true });
         }
         
-        // Commit transaction
-        await query('COMMIT');
-        
-        // Return response based on results
-        if (productsInOrders.length > 0) {
-            return res.status(200).json({
-                status: 'partial',
-                message: `Đã xóa ${productsToDelete.length} sản phẩm. ${productsInOrders.length} sản phẩm không thể xóa do đã có trong đơn hàng.`,
-                deletedCount: productsToDelete.length,
-                failedCount: productsInOrders.length
-            });
-        } else {
-            return res.status(200).json({
-                status: 'success',
-                message: `Đã xóa thành công ${productsToDelete.length} sản phẩm.`,
-                deletedCount: productsToDelete.length
-            });
-        }
+        await query('DELETE FROM product_variants WHERE product_id = ?', [productId]);
+        await query('DELETE FROM product_details WHERE product_id = ?', [productId]);
+        await query('DELETE FROM product_imgs WHERE product_id = ?', [productId]);
+        await query('DELETE FROM products WHERE product_id = ?', [productId]);
+      }
+      
+      await query('COMMIT');
+      
+      if (productsInOrders.length > 0) {
+        return res.status(200).json({
+          status: 'partial',
+          message: `Đã xóa ${productsToDelete.length} sản phẩm. ${productsInOrders.length} sản phẩm không thể xóa do đã có trong đơn hàng.`,
+          deletedCount: productsToDelete.length,
+          failedCount: productsInOrders.length
+        });
+      } else {
+        return res.status(200).json({
+          status: 'success',
+          message: `Đã xóa thành công ${productsToDelete.length} sản phẩm.`,
+          deletedCount: productsToDelete.length
+        });
+      }
     } catch (error) {
-        // Rollback transaction on error
-        await query('ROLLBACK');
-        console.error('Error bulk deleting products:', error);
-        res.status(500).json({
-            status: 'error',
-            message: 'Đã có lỗi xảy ra khi xóa sản phẩm'
-        });
+      await query('ROLLBACK');
+      console.error('Error bulk deleting products:', error);
+      res.status(500).json({
+        status: 'error',
+        message: 'Đã có lỗi xảy ra khi xóa sản phẩm'
+      });
     }
   }
 
   // Add a new API method for bulk visibility update
   updateProductsVisibility = async (req, res) => {
     try {
-        const { productIds, visibility } = req.body;
-        
-        if (!productIds || !Array.isArray(productIds) || productIds.length === 0) {
-            return res.status(400).json({
-                status: 'error',
-                message: 'Không có sản phẩm được chọn'
-            });
-        }
-        
-        if (visibility !== 0 && visibility !== 1) {
-            return res.status(400).json({
-                status: 'error',
-                message: 'Trạng thái hiển thị không hợp lệ'
-            });
-        }
-        
-        // Update products visibility
-        await query('UPDATE products SET product_is_display = ? WHERE product_id IN (?)', [visibility, productIds]);
-        
-        res.status(200).json({
-            status: 'success',
-            message: `Đã cập nhật trạng thái hiển thị cho ${productIds.length} sản phẩm.`
+      const { productIds, visibility } = req.body;
+      
+      if (!productIds || !Array.isArray(productIds) || productIds.length === 0) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'Không có sản phẩm được chọn'
         });
+      }
+      
+      if (visibility !== 0 && visibility !== 1) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'Trạng thái hiển thị không hợp lệ'
+        });
+      }
+      
+      // Update products visibility
+      await query('UPDATE products SET product_is_display = ? WHERE product_id IN (?)', [visibility, productIds]);
+      
+      res.status(200).json({
+        status: 'success',
+        message: `Đã cập nhật trạng thái hiển thị cho ${productIds.length} sản phẩm.`
+      });
     } catch (error) {
-        console.error('Error updating products visibility:', error);
-        res.status(500).json({
-            status: 'error',
-            message: 'Đã có lỗi xảy ra khi cập nhật trạng thái hiển thị sản phẩm'
-        });
+      console.error('Error updating products visibility:', error);
+      res.status(500).json({
+        status: 'error',
+        message: 'Đã có lỗi xảy ra khi cập nhật trạng thái hiển thị sản phẩm'
+      });
     }
   }
 
@@ -1301,12 +1401,12 @@ class AdminController {
 
       // Fetch orders with user info
       const orders = await query(`
-        SELECT o.*, u.user_fullname
+        SELECT o.*, u.user_fullname, u.user_email, u.user_phone
         FROM orders o
         JOIN users u ON o.user_id = u.user_id
         ORDER BY o.order_date DESC
       `);
-   
+
       res.render('admin/pages/orders_admin', {
         title: {
           title: 'Quản lý đơn hàng'
@@ -1331,7 +1431,7 @@ class AdminController {
     try {
       const user = req.admin;
       const orderId = req.params.id;
-
+      
       // Fetch order with user info
       const orders = await query(`
         SELECT o.*, u.user_fullname, u.user_email, u.user_phone
@@ -1493,4 +1593,4 @@ class AdminController {
   }
 }
 
-module.exports = new AdminController()
+module.exports = new AdminController();

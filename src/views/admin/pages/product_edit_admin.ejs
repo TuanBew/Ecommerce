@@ -23,15 +23,16 @@
             <div class="card-body">
                 <form id="edit-product-form" enctype="multipart/form-data">
                     <input type="hidden" name="product_id" value="<%= product.product_id %>">
+                    <input type="hidden" name="original_data" id="original_data" value="">
 
                     <div class="form-group">
                         <label>Product Name</label>
-                        <input type="text" name="product_name" class="form-control" value="<%= product.product_name %>" required>
+                        <input type="text" name="product_name" class="form-control track-change" value="<%= product.product_name %>" required>
                     </div>
 
                     <div class="form-group">
                         <label>Category</label>
-                        <select name="category_id" class="form-control" required>
+                        <select name="category_id" class="form-control track-change" required>
                             <% categories.forEach(category => { %>
                                 <option value="<%= category.category_id %>" <%= product.category_id === category.category_id ? 'selected' : '' %>>
                                     <%= category.category_name %>
@@ -40,45 +41,172 @@
                         </select>
                     </div>
 
-                    <div class="form-group">
-                        <label>Description</label>
-                        <textarea name="product_description" class="form-control" rows="5"><%= product.product_description %></textarea>
+                    <div class="form-row">
+                        <div class="form-group col">
+                            <label>Supplier</label>
+                            <select name="supplier_id" class="form-control track-change">
+                                <option value="">Select Supplier</option>
+                                <% suppliers && suppliers.forEach(supplier => { %>
+                                    <option value="<%= supplier.supplier_id %>" <%= product.supplier_id === supplier.supplier_id ? 'selected' : '' %>>
+                                        <%= supplier.supplier_name %>
+                                    </option>
+                                <% }); %>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group col">
+                            <label>Product Period (months)</label>
+                            <input type="number" name="product_period" class="form-control track-change" value="<%= product.product_period || 12 %>">
+                        </div>
                     </div>
 
-                    <div class="form-check">
-                        <input type="checkbox" name="product_is_display" class="form-check-input" id="displayCheck" <%= product.product_is_display ? 'checked' : '' %>>
-                        <label class="form-check-label" for="displayCheck">Display Product</label>
+                    <div class="form-row">
+                        <div class="form-group col-md-6">
+                            <div class="checkbox-group">
+                                <div class="checkbox-item">
+                                    <input type="checkbox" name="product_is_bestseller" id="bestsellerCheck" class="form-check-input track-change" <%= product.product_is_bestseller ? 'checked' : '' %>>
+                                    <label class="form-check-label" for="bestsellerCheck">Bestseller Product</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group col-md-6">
+                            <div class="checkbox-group">
+                                <div class="checkbox-item">
+                                    <input type="checkbox" name="product_is_display" id="displayCheck" class="form-check-input track-change" <%= product.product_is_display ? 'checked' : '' %>>
+                                    <label class="form-check-label" for="displayCheck">Display Product</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Description</label>
+                        <textarea name="product_description" class="form-control track-change" rows="5"><%= product.product_description %></textarea>
+                    </div>
+
+                    <!-- PRODUCT IMAGES SECTION -->
+                    <h3>Product Images</h3>
+                    <p class="note">First image will be used as the product avatar</p>
+                    
+                    <div class="image-gallery-container" id="image-gallery">
+                        <% images.forEach((image, index) => { %>
+                            <div class="image-item <%= index === 0 ? 'avatar-image' : '' %>" data-image-id="<%= image.image_id %>">
+                                <div class="image-preview">
+                                    <img src="/imgs/product_image/P<%= product.product_id %>/<%= image.image_name %>" alt="Product Image">
+                                    <% if(index === 0) { %>
+                                        <span class="avatar-badge">Avatar</span>
+                                    <% } %>
+                                </div>
+                                <div class="image-actions">
+                                    <label class="image-display-checkbox">
+                                        <input type="checkbox" name="image_is_display_<%= image.image_id %>" class="track-change" <%= image.image_is_display ? 'checked' : '' %>>
+                                        <span class="display-label">Display</span>
+                                    </label>
+                                    <% if (index !== 0 || images.length > 1) { %>
+                                        <label class="delete-image-checkbox">
+                                            <input type="checkbox" name="delete_images" value="<%= image.image_id %>">
+                                            <span class="delete-label">Delete</span>
+                                        </label>
+                                    <% } %>
+                                </div>
+                            </div>
+                        <% }); %>
+                    </div>
+
+                    <div class="upload-new-images">
+                        <h4>Upload New Images</h4>
+                        <div id="new-images-container">
+                            <div class="new-image-input">
+                                <input type="file" name="new_image_1" class="form-control-file new-image-file" accept="image/*" onchange="previewImage(this)">
+                            </div>
+                        </div>
+                        <button type="button" class="btn-admin btn-info" id="add-image">Add More Images</button>
                     </div>
 
                     <!-- VARIANTS SECTION -->
                     <h3>Product Variants</h3>
                     <div id="variants-container" data-count="<%= variants.length %>">
                         <% variants.forEach((variant, index) => { %>
-                            <div class="variant-item">
+                            <div class="variant-item" data-index="<%= index %>">
                                 <input type="hidden" name="variants[<%= index %>][id]" value="<%= variant.product_variant_id %>">
                                 
-                                <div class="form-row">
-                                    <div class="form-group col">
-                                        <label>Name</label>
-                                        <input type="text" name="variants[<%= index %>][name]" class="form-control" 
-                                              value="<%= variant.product_variant_name %>" required>
+                                <div class="variant-header">
+                                    <h4>Variant #<%= index+1 %></h4>
+                                    <% if(variants.length > 1) { %>
+                                        <button type="button" class="btn-admin btn-danger btn-sm remove-variant">Remove</button>
+                                    <% } %>
+                                </div>
+                                
+                                <div class="variant-body">
+                                    <div class="form-row">
+                                        <div class="form-group col">
+                                            <label>Name</label>
+                                            <input type="text" name="variants[<%= index %>][name]" class="form-control variant-name track-change" 
+                                                value="<%= variant.product_variant_name %>" required>
+                                        </div>
+                                        
+                                        <div class="form-group col">
+                                            <label>Price</label>
+                                            <input type="number" name="variants[<%= index %>][price]" class="form-control track-change" 
+                                                value="<%= variant.product_variant_price %>" required>
+                                        </div>
+                                        
+                                        <div class="form-group col">
+                                            <label>Stock</label>
+                                            <input type="number" name="variants[<%= index %>][stock]" class="form-control track-change" 
+                                                value="<%= variant.product_variant_available %>">
+                                        </div>
+                                    </div>
+
+                                    <div class="form-row">
+                                        <div class="form-group col">
+                                            <label>Discount</label>
+                                            <select name="variants[<%= index %>][discount_id]" class="form-control track-change">
+                                                <option value="">No Discount</option>
+                                                <% discounts && discounts.forEach(discount => { %>
+                                                    <option value="<%= discount.discount_id %>" 
+                                                        <%= variant.discount_id === discount.discount_id ? 'selected' : '' %>>
+                                                        <%= discount.discount_name %> (<%= discount.discount_amount %>%)
+                                                    </option>
+                                                <% }); %>
+                                            </select>
+                                        </div>
                                     </div>
                                     
-                                    <div class="form-group col">
-                                        <label>Price</label>
-                                        <input type="number" name="variants[<%= index %>][price]" class="form-control" 
-                                              value="<%= variant.product_variant_price %>" required>
-                                    </div>
-                                    
-                                    <div class="form-group col">
-                                        <label>Stock</label>
-                                        <input type="number" name="variants[<%= index %>][stock]" class="form-control" 
-                                              value="<%= variant.product_variant_available %>">
-                                    </div>
-                                    
-                                    <div class="form-group col-auto">
-                                        <label>&nbsp;</label>
-                                        <button type="button" class="btn-admin btn-danger remove-variant">Remove</button>
+                                    <div class="form-row">
+                                        <div class="form-group col-md-4">
+                                            <div class="checkbox-group">
+                                                <div class="checkbox-item">
+                                                    <input type="checkbox" id="variant_bestseller_<%= index %>" 
+                                                        name="variants[<%= index %>][is_bestseller]" class="track-change"
+                                                        <%= variant.product_variant_is_bestseller ? 'checked' : '' %>>
+                                                    <label for="variant_bestseller_<%= index %>">Bestseller</label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="form-group col-md-4">
+                                            <div class="checkbox-group">
+                                                <div class="checkbox-item">
+                                                    <input type="checkbox" id="variant_stock_<%= index %>" 
+                                                        name="variants[<%= index %>][is_stock]" class="track-change"
+                                                        <%= variant.product_variant_is_stock ? 'checked' : '' %>>
+                                                    <label for="variant_stock_<%= index %>">In Stock</label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="form-group col-md-4">
+                                            <div class="checkbox-group">
+                                                <div class="checkbox-item">
+                                                    <input type="checkbox" id="variant_display_<%= index %>" 
+                                                        name="variants[<%= index %>][is_display]" class="track-change"
+                                                        <%= variant.product_variant_is_display ? 'checked' : '' %>>
+                                                    <label for="variant_display_<%= index %>">Display</label>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -91,20 +219,26 @@
                     <h3>Product Specifications</h3>
                     <div id="specs-container" data-count="<%= specs.length %>">
                         <% specs.forEach((spec, index) => { %>
-                            <div class="spec-item">
+                            <div class="spec-item" data-index="<%= index %>">
                                 <input type="hidden" name="specs[<%= index %>][id]" value="<%= spec.product_detail_id %>">
                                 
                                 <div class="form-row">
                                     <div class="form-group col">
                                         <label>Specification</label>
-                                        <input type="text" name="specs[<%= index %>][name]" class="form-control" 
+                                        <input type="text" name="specs[<%= index %>][name]" class="form-control track-change" 
                                               value="<%= spec.product_detail_name %>">
                                     </div>
                                     
                                     <div class="form-group col">
                                         <label>Value</label>
-                                        <input type="text" name="specs[<%= index %>][value]" class="form-control" 
+                                        <input type="text" name="specs[<%= index %>][value]" class="form-control track-change" 
                                               value="<%= spec.product_detail_value %>">
+                                    </div>
+
+                                    <div class="form-group col">
+                                        <label>Unit</label>
+                                        <input type="text" name="specs[<%= index %>][unit]" class="form-control track-change" 
+                                              value="<%= spec.product_detail_unit %>">
                                     </div>
                                     
                                     <div class="form-group col-auto">
@@ -117,35 +251,6 @@
                     </div>
                     
                     <button type="button" class="btn-admin btn-success" id="add-spec">Add Specification</button>
-
-                    <!-- IMAGES SECTION - REDESIGNED -->
-                    <h3>Product Images</h3>
-                    <div class="image-gallery-container" id="image-gallery">
-                        <% images.forEach(image => { %>
-                            <div class="image-item">
-                                <div class="image-preview">
-                                    <img src="/imgs/product_image/P<%= product.product_id %>/<%= image.image_name %>" alt="Product Image">
-                                </div>
-                                <div class="image-actions">
-                                    <label class="delete-image-checkbox">
-                                        <input type="checkbox" name="delete_images" value="<%= image.image_id %>">
-                                        <span class="delete-label">Delete</span>
-                                    </label>
-                                </div>
-                            </div>
-                        <% }); %>
-                        <!-- New images will be dynamically added here -->
-                    </div>
-
-                    <div class="upload-new-images">
-                        <h4>Upload New Images</h4>
-                        <div id="new-images-container">
-                            <div class="new-image-input">
-                                <input type="file" name="new_image_1" class="form-control-file new-image-file" accept="image/*" onchange="previewImage(this)">
-                            </div>
-                        </div>
-                        <button type="button" class="btn-admin btn-info" id="add-image">Add More Images</button>
-                    </div>
 
                     <div class="form-actions">
                         <button type="submit" class="btn-admin btn-primary">Save Changes</button>
@@ -162,10 +267,52 @@
             var variantIndex = parseInt(document.getElementById('variants-container').dataset.count);
             var specIndex = parseInt(document.getElementById('specs-container').dataset.count);
             var imageIndex = 1;
+            const changedFields = new Set();
+            
+            // Store original form data for comparison
+            const storeOriginalData = () => {
+                const form = document.getElementById('edit-product-form');
+                const formData = new FormData(form);
+                const originalData = {};
+                
+                formData.forEach((value, key) => {
+                    if (key !== 'original_data' && !(value instanceof File)) {
+                        originalData[key] = value;
+                    }
+                });
+                
+                document.getElementById('original_data').value = JSON.stringify(originalData);
+                console.log("Original form data stored");
+            };
+            
+            // Track changes to form fields
+            document.querySelectorAll('.track-change').forEach(element => {
+                const originalValue = element.type === 'checkbox' ? element.checked : element.value;
+                element.dataset.originalValue = element.type === 'checkbox' ? 
+                    (element.checked ? 'checked' : '') : originalValue;
+                
+                element.addEventListener('change', function() {
+                    const currentValue = this.type === 'checkbox' ? this.checked : this.value;
+                    const originalValue = this.type === 'checkbox' ? 
+                        (this.dataset.originalValue === 'checked') : this.dataset.originalValue;
+                    
+                    if ((this.type === 'checkbox' && currentValue !== (originalValue === 'checked')) || 
+                        (this.type !== 'checkbox' && currentValue !== originalValue)) {
+                        changedFields.add(this.name);
+                        this.classList.add('field-changed');
+                    } else {
+                        changedFields.delete(this.name);
+                        this.classList.remove('field-changed');
+                    }
+                    
+                    console.log("Changed fields:", Array.from(changedFields));
+                });
+            });
+            
+            // Call storeOriginalData after everything is set up
+            storeOriginalData();
             
             console.log("Product Edit Page Loaded - Product ID: <%= product.product_id %>");
-            console.log("Initial variant count:", variantIndex);
-            console.log("Initial spec count:", specIndex);
 
             // Image preview functionality
             window.previewImage = function(input) {
@@ -197,33 +344,98 @@
                     reader.readAsDataURL(input.files[0]);
                 }
             };
+            
+            // Reorder images functionality - Make first image be the avatar
+            const updateAvatarBadges = () => {
+                const imageItems = document.querySelectorAll('.image-item');
+                imageItems.forEach((item, index) => {
+                    const badge = item.querySelector('.avatar-badge');
+                    
+                    if (index === 0) {
+                        if (!badge) {
+                            const newBadge = document.createElement('span');
+                            newBadge.className = 'avatar-badge';
+                            newBadge.textContent = 'Avatar';
+                            item.querySelector('.image-preview').appendChild(newBadge);
+                        }
+                        item.classList.add('avatar-image');
+                    } else {
+                        if (badge) badge.remove();
+                        item.classList.remove('avatar-image');
+                    }
+                });
+            };
 
-            // Add Variant
+            // Add Variant - Fixed implementation that separates EJS from client-side JS
             document.getElementById('add-variant').addEventListener('click', function() {
                 console.log("Adding new variant:", variantIndex);
                 const variantsContainer = document.getElementById('variants-container');
                 const newVariant = document.createElement('div');
                 newVariant.className = 'variant-item';
+                newVariant.dataset.index = variantIndex;
                 
-                var html = '';
-                html += '<div class="form-row">';
-                html += '    <div class="form-group col">';
-                html += '        <label>Name</label>';
-                html += '        <input type="text" name="variants[' + variantIndex + '][name]" class="form-control" required>';
-                html += '    </div>';
-                html += '    <div class="form-group col">';
-                html += '        <label>Price</label>';
-                html += '        <input type="number" name="variants[' + variantIndex + '][price]" class="form-control" required>';
-                html += '    </div>';
-                html += '    <div class="form-group col">';
-                html += '        <label>Stock</label>';
-                html += '        <input type="number" name="variants[' + variantIndex + '][stock]" class="form-control" value="100">';
-                html += '    </div>';
-                html += '    <div class="form-group col-auto">';
-                html += '        <label>&nbsp;</label>';
-                html += '        <button type="button" class="btn-admin btn-danger remove-variant">Remove</button>';
-                html += '    </div>';
-                html += '</div>';
+                // Create the variant HTML - Using only client-side JS variables
+                var html = `
+                    <div class="variant-header">
+                        <h4>Variant #${variantIndex + 1}</h4>
+                        <button type="button" class="btn-admin btn-danger btn-sm remove-variant">Remove</button>
+                    </div>
+                    <div class="variant-body">
+                        <div class="form-row">
+                            <div class="form-group col">
+                                <label>Name</label>
+                                <input type="text" name="variants[${variantIndex}][name]" class="form-control variant-name track-change" required>
+                            </div>
+                            <div class="form-group col">
+                                <label>Price</label>
+                                <input type="number" name="variants[${variantIndex}][price]" class="form-control track-change" required>
+                            </div>
+                            <div class="form-group col">
+                                <label>Stock</label>
+                                <input type="number" name="variants[${variantIndex}][stock]" class="form-control track-change" value="100">
+                            </div>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group col">
+                                <label>Discount</label>
+                                <select name="variants[${variantIndex}][discount_id]" class="form-control track-change">
+                                    ${discountOptionsHtml}
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group col-md-4">
+                                <div class="checkbox-group">
+                                    <div class="checkbox-item">
+                                        <input type="checkbox" id="variant_bestseller_${variantIndex}" 
+                                            name="variants[${variantIndex}][is_bestseller]" class="track-change">
+                                        <label for="variant_bestseller_${variantIndex}">Bestseller</label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group col-md-4">
+                                <div class="checkbox-group">
+                                    <div class="checkbox-item">
+                                        <input type="checkbox" id="variant_stock_${variantIndex}" 
+                                            name="variants[${variantIndex}][is_stock]" class="track-change" checked>
+                                        <label for="variant_stock_${variantIndex}">In Stock</label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group col-md-4">
+                                <div class="checkbox-group">
+                                    <div class="checkbox-item">
+                                        <input type="checkbox" id="variant_display_${variantIndex}" 
+                                            name="variants[${variantIndex}][is_display]" class="track-change" checked>
+                                        <label for="variant_display_${variantIndex}">Display</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
                 
                 newVariant.innerHTML = html;
                 variantsContainer.appendChild(newVariant);
@@ -232,8 +444,58 @@
                 // Add event listener to the new remove button
                 newVariant.querySelector('.remove-variant').addEventListener('click', function() {
                     variantsContainer.removeChild(newVariant);
+                    updateVariantRemoveButtons();
                 });
+                
+                // Update track-change listeners for new elements
+                newVariant.querySelectorAll('.track-change').forEach(element => {
+                    const originalValue = element.type === 'checkbox' ? element.checked : element.value;
+                    element.dataset.originalValue = element.type === 'checkbox' ? 
+                        (element.checked ? 'checked' : '') : originalValue;
+                    
+                    element.addEventListener('change', function() {
+                        const currentValue = this.type === 'checkbox' ? this.checked : this.value;
+                        const originalValue = this.type === 'checkbox' ? 
+                            (this.dataset.originalValue === 'checked') : this.dataset.originalValue;
+                        
+                        if ((this.type === 'checkbox' && currentValue !== (originalValue === 'checked')) || 
+                            (this.type !== 'checkbox' && currentValue !== originalValue)) {
+                            changedFields.add(this.name);
+                            this.classList.add('field-changed');
+                        } else {
+                            changedFields.delete(this.name);
+                            this.classList.remove('field-changed');
+                        }
+                    });
+                });
+                
+                // Update variant remove buttons (hide if only one variant)
+                updateVariantRemoveButtons();
             });
+
+            // Update variant remove buttons visibility
+            function updateVariantRemoveButtons() {
+                const variants = document.querySelectorAll('.variant-item');
+                
+                // If only one variant remains, hide its remove button
+                if (variants.length === 1) {
+                    const removeBtn = variants[0].querySelector('.remove-variant');
+                    if (removeBtn) removeBtn.style.display = 'none';
+                } 
+                // Otherwise show remove buttons on all variants
+                else {
+                    variants.forEach(variant => {
+                        const removeBtn = variant.querySelector('.remove-variant');
+                        if (removeBtn) removeBtn.style.display = 'block';
+                    });
+                }
+                
+                // Renumber the variants
+                variants.forEach((variant, idx) => {
+                    const header = variant.querySelector('.variant-header h4');
+                    if (header) header.textContent = `Variant #${idx+1}`;
+                });
+            }
 
             // Add Specification
             document.getElementById('add-spec').addEventListener('click', function() {
@@ -241,22 +503,28 @@
                 const specsContainer = document.getElementById('specs-container');
                 const newSpec = document.createElement('div');
                 newSpec.className = 'spec-item';
+                newSpec.dataset.index = specIndex;
                 
-                var html = '';
-                html += '<div class="form-row">';
-                html += '    <div class="form-group col">';
-                html += '        <label>Specification</label>';
-                html += '        <input type="text" name="specs[' + specIndex + '][name]" class="form-control">';
-                html += '    </div>';
-                html += '    <div class="form-group col">';
-                html += '        <label>Value</label>';
-                html += '        <input type="text" name="specs[' + specIndex + '][value]" class="form-control">';
-                html += '    </div>';
-                html += '    <div class="form-group col-auto">';
-                html += '        <label>&nbsp;</label>';
-                html += '        <button type="button" class="btn-admin btn-danger remove-spec">Remove</button>';
-                html += '    </div>';
-                html += '</div>';
+                var html = `
+                    <div class="form-row">
+                        <div class="form-group col">
+                            <label>Specification</label>
+                            <input type="text" name="specs[${specIndex}][name]" class="form-control track-change">
+                        </div>
+                        <div class="form-group col">
+                            <label>Value</label>
+                            <input type="text" name="specs[${specIndex}][value]" class="form-control track-change">
+                        </div>
+                        <div class="form-group col">
+                            <label>Unit</label>
+                            <input type="text" name="specs[${specIndex}][unit]" class="form-control track-change">
+                        </div>
+                        <div class="form-group col-auto">
+                            <label>&nbsp;</label>
+                            <button type="button" class="btn-admin btn-danger remove-spec">Remove</button>
+                        </div>
+                    </div>
+                `;
                 
                 newSpec.innerHTML = html;
                 specsContainer.appendChild(newSpec);
@@ -265,6 +533,22 @@
                 // Add event listener to the new remove button
                 newSpec.querySelector('.remove-spec').addEventListener('click', function() {
                     specsContainer.removeChild(newSpec);
+                });
+                
+                // Add track-change listeners
+                newSpec.querySelectorAll('.track-change').forEach(element => {
+                    const originalValue = element.value;
+                    element.dataset.originalValue = originalValue;
+                    
+                    element.addEventListener('change', function() {
+                        if (this.value !== this.dataset.originalValue) {
+                            changedFields.add(this.name);
+                            this.classList.add('field-changed');
+                        } else {
+                            changedFields.delete(this.name);
+                            this.classList.remove('field-changed');
+                        }
+                    });
                 });
             });
 
@@ -276,11 +560,12 @@
                 const newImageInput = document.createElement('div');
                 newImageInput.className = 'new-image-input';
                 
-                var html = '';
-                html += '<div class="image-input-wrapper">';
-                html += '  <input type="file" name="new_image_' + imageIndex + '" class="form-control-file new-image-file" accept="image/*" onchange="previewImage(this)">';
-                html += '  <button type="button" class="btn-admin btn-sm btn-danger remove-image-input">Remove</button>';
-                html += '</div>';
+                var html = `
+                    <div class="image-input-wrapper">
+                        <input type="file" name="new_image_${imageIndex}" class="form-control-file new-image-file" accept="image/*" onchange="previewImage(this)">
+                        <button type="button" class="btn-admin btn-sm btn-danger remove-image-input">Remove</button>
+                    </div>
+                `;
                 
                 newImageInput.innerHTML = html;
                 newImagesContainer.appendChild(newImageInput);
@@ -308,6 +593,7 @@
                 button.addEventListener('click', function() {
                     const variantItem = this.closest('.variant-item');
                     variantItem.parentNode.removeChild(variantItem);
+                    updateVariantRemoveButtons();
                 });
             });
 
@@ -317,8 +603,37 @@
                     specItem.parentNode.removeChild(specItem);
                 });
             });
+            
+            // Make image items sortable (for avatar selection)
+            const imageItems = document.querySelectorAll('.image-item');
+            imageItems.forEach(item => {
+                item.addEventListener('click', function(e) {
+                    // Skip if clicking on a checkbox or button
+                    if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON' || 
+                        e.target.classList.contains('delete-label') || 
+                        e.target.classList.contains('display-label')) {
+                        return;
+                    }
+                    
+                    // Move this item to the start (make it the avatar)
+                    const gallery = document.getElementById('image-gallery');
+                    const firstItem = gallery.firstElementChild;
+                    
+                    if (this !== firstItem) {
+                        gallery.insertBefore(this, firstItem);
+                        updateAvatarBadges();
+                        
+                        // Mark form as changed
+                        changedFields.add('avatar_changed');
+                        console.log("Avatar image changed");
+                    }
+                });
+            });
 
-            // Form submission - Enhanced with better error handling and logging
+            // Initialize variant remove buttons
+            updateVariantRemoveButtons();
+            
+            // Form submission - Enhanced with better error handling and change tracking
             document.getElementById('edit-product-form').addEventListener('submit', function(e) {
                 e.preventDefault();
                 console.log("Form submission started");
@@ -364,6 +679,37 @@
                 
                 if (!hasValidFiles) return;
                 
+                // Check if we would be left with at least one image
+                const existingImageCount = document.querySelectorAll('.image-item:not(.new-preview)').length;
+                const deleteCheckboxes = document.querySelectorAll('input[name="delete_images"]:checked');
+                
+                if (existingImageCount - deleteCheckboxes.length + fileCount < 1) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'Product must have at least one image for the avatar'
+                    });
+                    return;
+                }
+                
+                // Make sure we have at least one variant
+                const variants = document.querySelectorAll('.variant-item');
+                if (variants.length === 0) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'Product must have at least one variant'
+                    });
+                    return;
+                }
+                
+                // Add the list of changed fields to the form data for optimized updates
+                const changedFieldsInput = document.createElement('input');
+                changedFieldsInput.type = 'hidden';
+                changedFieldsInput.name = 'changed_fields';
+                changedFieldsInput.value = JSON.stringify(Array.from(changedFields));
+                this.appendChild(changedFieldsInput);
+                
                 // Continue with form submission
                 // Show loading indicator
                 Swal.fire({
@@ -379,23 +725,8 @@
                 const productId = formData.get('product_id');
                 
                 console.log("Submitting form for product ID:", productId);
-                console.log("Form values:", {
-                    product_name: formData.get('product_name'),
-                    category_id: formData.get('category_id'),
-                    product_is_display: formData.has('product_is_display') ? 'Yes' : 'No',
-                    "file count": document.querySelectorAll('input[type="file"]').length,
-                    "filled file inputs": Array.from(document.querySelectorAll('input[type="file"]'))
-                        .filter(input => input.files.length > 0).length
-                });
                 
-                // Log any checked delete images
-                const deleteImages = document.querySelectorAll('input[name="delete_images"]:checked');
-                if (deleteImages.length > 0) {
-                    console.log("Images marked for deletion:", 
-                        Array.from(deleteImages).map(cb => cb.value).join(', '));
-                }
-                
-                // Submit the form with fetch API - USING CORRECT URL
+                // Submit the form with fetch API
                 fetch(`/admin/products_admin/update/${productId}`, {
                     method: 'POST',
                     body: formData
@@ -446,8 +777,8 @@
                 });
             });
 
-            // Add debugging helper function
-            function showDebugInfo() {
+            // Debug helper function
+            window.showDebugInfo = function() {
                 const productId = document.querySelector('input[name="product_id"]').value;
                 const files = document.querySelectorAll('input[type="file"]');
                 
@@ -462,6 +793,9 @@
                     }
                 });
                 
+                debugInfo += '\nChanged Fields:\n';
+                debugInfo += Array.from(changedFields).join('\n');
+                
                 Swal.fire({
                     title: 'Debug Information',
                     html: '<pre style="text-align: left;">' + debugInfo + '</pre>',
@@ -469,15 +803,140 @@
                         popup: 'debug-popup'
                     }
                 });
-            }
+            };
         });
     </script>
 
     <style>
+        /* Enhanced styling for the product edit form */
+        .variant-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #f5f5f5;
+            padding: 10px;
+            border-radius: 4px 4px 0 0;
+            margin-bottom: 10px;
+        }
+        
+        .variant-header h4 {
+            margin: 0;
+        }
+        
+        .variant-body {
+            padding: 0 10px 10px;
+        }
+        
+        .variant-item {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            background-color: #fff;
+        }
+        
+        .checkbox-group {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+        
+        .checkbox-item label {
+            margin-left: 5px;
+            margin-bottom: 0;
+        }
+        
+        .note {
+            font-size: 0.9rem;
+            color: #666;
+            margin-top: -10px;
+            margin-bottom: 10px;
+        }
+        
+        .image-gallery-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .image-item {
+            width: 150px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .image-item:hover {
+            transform: scale(1.05);
+            border-color: #007bff;
+        }
+        
+        .image-item.avatar-image {
+            border-color: #28a745;
+            border-width: 2px;
+        }
+        
+        .avatar-badge {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background-color: #28a745;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.75rem;
+        }
+        
+        .new-badge {
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            background-color: #007bff;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.75rem;
+        }
+        
+        .image-actions {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px;
+            background-color: #f5f5f5;
+        }
+        
+        .delete-image-checkbox, .image-display-checkbox {
+            display: flex;
+            align-items: center;
+            font-size: 0.75rem;
+        }
+        
+        .delete-label {
+            color: #dc3545;
+        }
+        
+        .display-label {
+            color: #007bff;
+        }
+        
+        .field-changed {
+            border-color: #ffc107;
+            background-color: #fff8e1;
+        }
+        
         /* Add styling for debug popup */
         .debug-popup {
             max-width: 600px !important;
         }
+        
         .debug-popup pre {
             background-color: #f5f5f5;
             padding: 10px;
@@ -486,5 +945,7 @@
             overflow-wrap: break-word;
         }
     </style>
+    
+    <script src="/js/admin-debug.js"></script>
 </body>
 </html>
